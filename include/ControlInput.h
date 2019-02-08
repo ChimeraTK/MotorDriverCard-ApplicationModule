@@ -21,6 +21,8 @@
 namespace ctk    = ChimeraTK;
 namespace ctkmot = ctk::MotorDriver;
 
+namespace ChimeraTK {
+namespace MotorDriver {
 /**
  * A map between the TransferElementID of a PV and the associated
  * function of the MotorDriverCard library. This allows to pass on
@@ -170,4 +172,6 @@ private:
   std::shared_ptr<ctkmot::StepperMotor> _motor;
 
 }; /* class ControlInputHandler */
+}
+}
 #endif /* INCLUDE_CONTROLINPUT_H_ */

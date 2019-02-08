@@ -21,6 +21,9 @@ namespace ctk    = ChimeraTK;
 namespace ctkmot = ctk::MotorDriver;
 
 
+namespace ChimeraTK {
+namespace MotorDriver {
+
 /**
  *  Position data
  */
@@ -147,5 +150,8 @@ private:
   const bool _motorIsDummy;
   bool motorIsDummy();
 };
+
+}
+}
 
 #endif /* INCLUDE_MOTORDRIVERREADBACK_H_ */

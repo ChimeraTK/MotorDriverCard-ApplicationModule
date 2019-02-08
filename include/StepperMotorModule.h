@@ -17,17 +17,20 @@
 
 #include <memory>
 
-namespace ctkmot = ChimeraTK::MotorDriver;
+//namespace ctkmot = ChimeraTK::MotorDriver;
+namespace ChimeraTK {
+namespace MotorDriver {
 
-
-struct MotorDriver : public ctk::ModuleGroup {
+struct MotorDriver : public ModuleGroup {
   MotorDriver(ctk::EntityOwner *owner, const std::string &name, const std::string &description,
-                    const ctkmot::StepperMotorParameters &motorParameters);
+                    const StepperMotorParameters &motorParameters);
 
-  std::shared_ptr<ctkmot::StepperMotor> motor;
+  std::shared_ptr<StepperMotor> motor;
   ControlInputHandler ctrlInputHandler;
   ReadbackHandler readbackHandler;
 };
+}
+}
 
 
 #endif /* INCLUDE_MOTORDRIVER_H_ */

@@ -9,6 +9,9 @@
 #include <memory>
 
 
+namespace ChimeraTK {
+namespace MotorDriver {
+
 MotorDriver::MotorDriver(ctk::EntityOwner *owner, const std::string &name, const std::string &description,
                                    const ctkmot::StepperMotorParameters &motorParameters)
   : ctk::ModuleGroup(owner, name, description),
@@ -16,3 +19,5 @@ MotorDriver::MotorDriver(ctk::EntityOwner *owner, const std::string &name, const
   ctrlInputHandler{this, "controlInput", "Handles the control input to the motor driver.", motor},
   readbackHandler{motor, this, "readback", "Signals read from the motor driver"}{}
 
+}
+}

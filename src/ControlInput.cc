@@ -9,6 +9,10 @@
 #include "mtca4u/MotorDriverCard/MotorDriverException.h"
 
 
+namespace ChimeraTK {
+namespace MotorDriver {
+
+
 ControlInputHandler::ControlInputHandler(ctk::EntityOwner *owner, const std::string &name, const std::string &description, std::shared_ptr<ctkmot::StepperMotor> motor)
     : ctk::ApplicationModule(owner, name, description),
       //_calibrationCommands{},
@@ -142,4 +146,6 @@ void ControlInputHandler::determineToleranceCallback(){
       notification.message = "WARNING: Called determineTolerance while motor is not in IDLE state.";
     }
   }
+}
+}
 }

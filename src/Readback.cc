@@ -8,6 +8,10 @@
 #include "Readback.h"
 #include "ChimeraTK/MotorDriverCard/StepperMotorException.h"
 
+
+namespace ChimeraTK {
+namespace MotorDriver {
+
 void ReadbackHandler::mainLoop(){
 
   readConstData();
@@ -129,4 +133,7 @@ bool ReadbackHandler::motorIsDummy(){
     isDummy = true;
   }
   return isDummy;
+}
+
+}
 }
