@@ -25,12 +25,16 @@ install(DIRECTORY include/ DESTINATION include/ChimeraTK/MotorDriverCard)
 
 
 # The shared library
-set(SRC StepperMotorModule.cc ControlInput.cc Readback.cc)
+set(SRC StepperMotorModule.cc StepperMotorCtrl.cc StepperMotorReadback.cc)
 foreach(SOURCE ${SRC})
     set(LIBRARY_SOURCES ${LIBRARY_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/src/${SOURCE})
 endforeach()
 
 add_library(${PROJECT_NAME} SHARED ${LIBRARY_SOURCES})
+set_target_properties(${PROJECT_NAME} PROPERTIES 
+                                       VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION}
+                                       SOVERSION ${${PROJECT_NAME}_SOVERSION})
+
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_link_libraries(${PROJECT_NAME}
                         ${ChimeraTK-ApplicationCore_LIBRARIES}

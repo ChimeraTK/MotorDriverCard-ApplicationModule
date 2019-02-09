@@ -18,7 +18,14 @@ class ExecutionTimer {
     int64_t nIterations;
 
   public:
-    ExecutionTimer(){}
+    ExecutionTimer()
+      : samples{},
+        period{},
+        overhead{},
+        previousSample{},
+        measurement_result{0},
+        nIterations{0}{}
+
     ~ExecutionTimer(){}
     void getClockProperties(void);
     void sample(void);

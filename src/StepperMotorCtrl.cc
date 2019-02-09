@@ -1,11 +1,11 @@
 /*
- * ControlInput.cc
+ * StepperMotorCtrl.cc
  *
  *  Created on: Sep 13, 2018
  *      Author: ckampm
  */
 
-#include "ControlInput.h"
+#include "StepperMotorCtrl.h"
 #include "mtca4u/MotorDriverCard/MotorDriverException.h"
 
 
@@ -13,22 +13,18 @@ namespace ChimeraTK {
 namespace MotorDriver {
 
 
-ControlInputHandler::ControlInputHandler(ctk::EntityOwner *owner, const std::string &name, const std::string &description, std::shared_ptr<ctkmot::StepperMotor> motor)
-    : ctk::ApplicationModule(owner, name, description),
-      //_calibrationCommands{},
+ControlInputHandler::ControlInputHandler(EntityOwner *owner, const std::string &name, const std::string &description, std::shared_ptr<StepperMotor> motor)
+    : ApplicationModule(owner, name, description),
       _motor(motor)
 {
   // If motor has HW reference switches,
   // calibration is supported
   if(_motor->hasHWReferenceSwitches()){
-      //control.calibrate.replace(ctk::ScalarPushInput<int>(&control, "calibrate", "", "Starts calibration", {"SPECIAL"}));
       control.calibrationCtrl = CalibrationCommands{&control, "calibrationControl", "Calibration commands", true, {"MOTOR"}};
-
-      //_calibrationCommands = CalibrationCommands{this, "calibrationCommands", "Calibration commands", false};
   }
-};
+}
 
-void ControlInputHandler::createFunctionMap(std::shared_ptr<ctkmot::StepperMotor> motor){
+void ControlInputHandler::createFunctionMap(std::shared_ptr<StepperMotor> motor){
 
   funcMap[control.enable.getId()]              = [this]{enableCallback();};
   funcMap[control.disable.getId()]             = [this]{disableCallback();};

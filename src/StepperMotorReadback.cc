@@ -1,11 +1,11 @@
 /*
- * MotorDriverReadback.cc
+ * StepperMotorReadback.cc
  *
  *  Created on: Sep 17, 2018
  *      Author: ckampm
  */
 
-#include "Readback.h"
+#include "StepperMotorReadback.h"
 #include "ChimeraTK/MotorDriverCard/StepperMotorException.h"
 
 
@@ -47,9 +47,9 @@ void ReadbackHandler::mainLoop(){
 
 
 ReadbackHandler::ReadbackHandler(
-      std::shared_ptr<ctkmot::StepperMotor> motor,
-      ctk::EntityOwner *owner, const std::string &name, const std::string &description)
-  : ctk::ApplicationModule::ApplicationModule(owner, name, description),
+      std::shared_ptr<StepperMotor> motor,
+      EntityOwner *owner, const std::string &name, const std::string &description)
+  : ApplicationModule::ApplicationModule(owner, name, description),
     positiveEndSwitch{},
     negativeEndSwitch{},
     _motor{motor},
@@ -128,8 +128,8 @@ bool ReadbackHandler::motorIsDummy(){
   try {
     // Throws if dummy is used
     _motor->getSafeCurrentLimit();
-  } catch (ctk::StepperMotorException &e) {
-    if(e.getID() == ctk::StepperMotorException::FEATURE_NOT_AVAILABLE)
+  } catch (StepperMotorException &e) {
+    if(e.getID() == StepperMotorException::FEATURE_NOT_AVAILABLE)
     isDummy = true;
   }
   return isDummy;
