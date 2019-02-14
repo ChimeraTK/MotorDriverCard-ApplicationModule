@@ -97,11 +97,15 @@ void ControlInputHandler::mainLoop() {
 }
 
 void ControlInputHandler::enableCallback(){
-  _motor->setEnabled(true);
+  if(control.enable){
+    _motor->setEnabled(true);
+  }
 }
 
 void ControlInputHandler::disableCallback(){
-  _motor->setEnabled(false);
+  if(control.disable){
+    _motor->setEnabled(false);
+  }
 }
 
 void ControlInputHandler::startCallback(){
