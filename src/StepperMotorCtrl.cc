@@ -15,6 +15,8 @@ namespace MotorDriver {
 
 ControlInputHandler::ControlInputHandler(EntityOwner *owner, const std::string &name, const std::string &description, std::shared_ptr<StepperMotor> motor)
     : ApplicationModule(owner, name, description),
+      funcMap(),
+      inputGroup(),
       _motor(motor)
 {
   // If motor has HW reference switches,
@@ -31,7 +33,7 @@ void ControlInputHandler::createFunctionMap(std::shared_ptr<StepperMotor> motor)
   funcMap[control.start.getId()]               = [this]{startCallback();};
   funcMap[control.stop.getId()]                = [this, motor]{ if(control.stop){motor->stop();} };
   funcMap[control.emergencyStop.getId()]       = [this, motor]{ if(control.emergencyStop){ motor->emergencyStop();} };
-  funcMap[control.resetError.getId()]          = [      motor]{ motor->resetError(); };
+  funcMap[control.resetError.getId()]          = [this, motor]{ if(control.resetError){motor->resetError();} };
   funcMap[control.enableAutostart.getId()]     = [this, motor]{ motor->setAutostart(control.enableAutostart);};
   funcMap[control.enableFullStepping.getId()]  = [this, motor]{ motor->enableFullStepping(control.enableFullStepping); };
 
