@@ -52,7 +52,10 @@ ReadbackHandler::ReadbackHandler(
   : ApplicationModule::ApplicationModule(owner, name, description),
     positiveEndSwitch{},
     negativeEndSwitch{},
+    readbackFunction{},
     _motor{motor},
+    execTimer{},
+    receiveTimer{},
     _motorIsDummy{motorIsDummy()}
 {
   if(_motor->hasHWReferenceSwitches()){
