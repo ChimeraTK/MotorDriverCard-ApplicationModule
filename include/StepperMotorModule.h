@@ -21,7 +21,8 @@ namespace MotorDriver {
 
 struct StepperMotorModule : public ModuleGroup {
   StepperMotorModule(EntityOwner *owner, const std::string &name, const std::string &description,
-                    const StepperMotorParameters &motorParameters);
+                    const StepperMotorParameters &motorParameters,
+                    const std::unordered_set<std::string>& tags = {});
 
   std::shared_ptr<StepperMotor> motor;
   ControlInputHandler ctrlInputHandler;
