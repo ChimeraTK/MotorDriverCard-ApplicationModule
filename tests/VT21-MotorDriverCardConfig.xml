@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<MotorDriverCardConfig>
+	<MotorControlerConfig motorID="0">
+	        <!--coolStep off -->
+		<Register name="coolStepControlData" value="0x0" />
+		<!-- 16 microsteps per 90 degrees -->
+		<Register name="driverControlData" value="0x4" />
+		<!-- filtered stallGuard with 4/32 current scale -->
+		<Register name="stallGuardControlData" value="0x10003" />
+		<!-- end switches enabled -->
+		<Register name="referenceConfigAndRampModeData" value="0x0" />
+		<!-- should be 1 in usual applications -->
+		<Register name="minimumVelocity" value="0x1" />
+		<Register name="maximumAcceleration" value="0x96" />
+		<Register name="maximumVelocity" value="0x576" />
+		<Register name="proportionalityFactorData" value="0x9405" />
+		<Register name="dividersAndMicroStepResolutionData" value="0x7804" />
+	</MotorControlerConfig>
+</MotorDriverCardConfig>
