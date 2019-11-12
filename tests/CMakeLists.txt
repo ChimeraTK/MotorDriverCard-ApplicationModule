@@ -15,6 +15,7 @@ foreach( testExecutableSrcFile ${testExecutables})
   add_executable(${excutableName} ${testExecutableSrcFile})
   set_target_properties(${excutableName} 
     PROPERTIES 
+    INCLUDE_DIRECTORIES "${mtca4u-MotorDriverCard_INCLUDE_DIRS}"
     LINK_FLAGS "${CMAKE_LINK_FLAGS} ${ChimeraTK-MotorDriverCard-ApplicationModule_LINK_FLAGS}"
   )
   target_link_libraries(${excutableName} ${PROJECT_NAME}
