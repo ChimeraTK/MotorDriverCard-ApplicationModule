@@ -3,7 +3,7 @@
 // Only after defining the name include the unit test header.
 #include <boost/test/included/unit_test.hpp>
 
-#include <ChimeraTK/MotorDriverCard/StepperMotorModule.h>
+#include "StepperMotorModule.h"
 
 #include <ChimeraTK/ApplicationCore/ApplicationCore.h>
 #include <ChimeraTK/ApplicationCore/TestFacility.h>
