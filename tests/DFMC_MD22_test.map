@@ -45,3 +45,9 @@ WORD_I2C_FMC_TX                          1       1164         4         1
 WORD_I2C_FMC_RX                          1       1168         4         1
 WORD_I2C_FMC_ADR                         1       1172         4         1
 WORD_I2C_FMC_CMD                         1       1176         4         1
+MD22_1.WORD_M1_END_SW_POS                1       4320         4         1
+MD22_1.WORD_M1_END_SW_NEG                1       4324         4         1
+MD22_1.WORD_M1_CAL_TIME                  1       4328         4         1
+MD22_1.WORD_M2_END_SW_POS                1       4332         4         1
+MD22_1.WORD_M2_END_SW_NEG                1       4336         4         1
+MD22_1.WORD_M2_CAL_TIME                  1       4340         4         1
