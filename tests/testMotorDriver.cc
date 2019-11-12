@@ -7,7 +7,6 @@
 
 #include <ChimeraTK/ApplicationCore/ApplicationCore.h>
 #include <ChimeraTK/ApplicationCore/TestFacility.h>
-//#include <ChimeraTK/ApplicationCore/PeriodicTrigger.h>
 
 // Includes to use to dummy motor
 #include "mtca4u/MotorDriverCard/MotorControlerDummy.h"
@@ -25,15 +24,47 @@ static const std::string dmapPath(".");
 static const std::string moduleName("");
 
 
+// Test server
+struct TestServer : public ctk::Application {
+
+  TestServer()
+    : ctk::Application("MotorDriverCard_ApplicationModule_TestServer"){}
+  ~TestServer() override { shutdown(); }
+
+  ctk::ControlSystemModule cs{};
+
+  // Motor instance and parameters
+  ctk::MotorDriver::StepperMotorParameters parameters
+    = {ctk::MotorDriver::StepperMotorType::LINEAR, stepperMotorDeviceName, moduleName, 0U, stepperMotorDeviceConfigFile};
+  std::unique_ptr<ctk::MotorDriver::StepperMotorModule> motor;
+
+  void defineConnections() override {
+
+    motor = std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters);
+
+    cs["Trigger"]("tick") >> motor->readbackHandler("tick");
+    motor->findTag("MOTOR|MOT_DIAG").connectTo(cs["Motor"]);
+
+//      cs.dump();
+//      dumpConnections();
+  }
+
+};
+
+
+
 /**
  * TestFixture struct
  *
- * Provides a test Application containing the StepperMotorModule to be tested
- * and a MotorControlerDummy to mimic motor functionality
+ * Only holds a MotorControlerDummy to mimic motor functionality.
+ * The Application and TestFacility have to be created in each test case,
+ * so that we can simulate different init scenarios (depending on the calibration state)
+ * of the StepperMotorModule.
  */
 struct TestFixture {
   TestFixture(){
-    testFacility.runApplication();
+    mtca4u::MotorDriverCardFactory::instance().setDummyMode();
+    ChimeraTK::setDMapFilePath("./MD22_on_DAMC2.dmap");
 
     boost::shared_ptr<mtca4u::MotorDriverCard> mdc{mtca4u::MotorDriverCardFactory::instance()
           .createMotorDriverCard(stepperMotorDeviceName, moduleName, stepperMotorDeviceConfigFile)};
@@ -42,45 +73,7 @@ struct TestFixture {
                mdc->getMotorControler(0));
   }
 
-  // Test server
-  struct TestServer : public ctk::Application {
-
-    TestServer()
-      : ctk::Application("MotorDriverCard_ApplicationModule_TestServer"){ mtca4u::MotorDriverCardFactory::instance().setDummyMode(); }
-    ~TestServer() override { shutdown(); }
-
-    ctk::ControlSystemModule cs{};
-    //ctk::PeriodicTrigger trigger{this, "trigger", ""};
-
-    // Motor instance and parameters
-    ctk::MotorDriver::StepperMotorParameters parameters
-      = {ctk::MotorDriver::StepperMotorType::LINEAR, stepperMotorDeviceName, moduleName, 0U, stepperMotorDeviceConfigFile};
-    std::unique_ptr<ctk::MotorDriver::StepperMotorModule> motor;
-
-    void defineConnections() override {
-
-      //ChimeraTK::setDMapFilePath("MD22_on_DAMC2.dmap");
-
-      motor = std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters);
-
-      cs["Trigger"]("tick") >> motor->readbackHandler("tick");
-      motor->findTag("MOTOR|MOT_DIAG").connectTo(cs["Motor"]);
-
-//      cs.dump();
-//      dumpConnections();
-    }
-
-  } testServer;
-
-  ChimeraTK::TestFacility testFacility;
-
   boost::shared_ptr<mtca4u::MotorControlerDummy> _motorControlerDummy;
-
-  void applyInputAndTriggerReadback(void){
-    testFacility.stepApplication();
-    testFacility.writeScalar<uint64_t>("Trigger/tick", 1);
-    testFacility.stepApplication();
-  }
 
 };
 
@@ -89,9 +82,12 @@ using namespace boost::unit_test_framework;
 
 /**********************************************************************************************************************/
 
-/// A template test case
-BOOST_FIXTURE_TEST_CASE(testMotorDriver, TestFixture){
-  std::cout << "testMotorDriver" << std::endl;
+BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture){
+  std::cout << "testMoving" << std::endl;
+
+  TestServer testServer;
+  ChimeraTK::TestFacility testFacility;
+  testFacility.runApplication();
 
   auto  trigger = testFacility.getScalar<uint64_t>("Trigger/tick");
   auto motorState  = testFacility.getScalar<std::string>("Motor/readback/status/state");
@@ -114,7 +110,9 @@ BOOST_FIXTURE_TEST_CASE(testMotorDriver, TestFixture){
   testFacility.writeScalar<int>("Motor/controlInput/referenceSettings/positionInSteps", 0);
 
 
-  applyInputAndTriggerReadback();
+  testFacility.stepApplication();
+  trigger.write();
+  testFacility.stepApplication();
   motorState.read();
 
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/autostartEnabled"), 1);
@@ -127,7 +125,9 @@ BOOST_FIXTURE_TEST_CASE(testMotorDriver, TestFixture){
   int targetPosition{1000};
   testFacility.writeScalar<int>("Motor/controlInput/positionSetpoint/positionInSteps", targetPosition);
 
-  applyInputAndTriggerReadback();
+  testFacility.stepApplication();
+  trigger.write();
+  testFacility.stepApplication();
   motorState.read();
 
   // Target value should have been applied and module transitioned ito state "moving"
@@ -149,3 +149,67 @@ BOOST_FIXTURE_TEST_CASE(testMotorDriver, TestFixture){
 
 /**********************************************************************************************************************/
 
+BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture){
+  std::cout << "testStartup (calibration mode SIMPLE)" << std::endl;
+
+  // Enable he dummy motor
+  _motorControlerDummy->setEnabled(true);
+  _motorControlerDummy->setMotorCurrentEnabled(true);
+
+  // Set the calibration time to a nonzero value
+  // -> Motor instance should be initialized with CalibrationMode::SIMPLE
+  _motorControlerDummy->setCalibrationTime(123456U);
+
+  TestServer testServer;
+  ChimeraTK::TestFacility testFacility;
+  testFacility.runApplication();
+
+
+  auto  trigger = testFacility.getScalar<uint64_t>("Trigger/tick");
+  auto motorState  = testFacility.getScalar<std::string>("Motor/readback/status/state");
+
+  trigger.write();
+  testFacility.stepApplication();
+  motorState.read();
+
+  // Application should start with disabled motor
+  // We currently have to test for FULL instead of SIMPLE, because the MotorControlerDummy does
+  // not yet support storage of the calibration  (TODO, See MotorDriverCard issue #9).
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
+                                                 static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::FULL));
+}
+
+
+
+// TODO Add test for CalibrationMode::FULL, when MotorControlerDummy supports this
+//      (See MotorDriverCard issue #9).
+//BOOST_FIXTURE_TEST_CASE(testStartup, TestFixture){
+//  std::cout << "testStartup (calibration mode FULL)" << std::endl;
+
+//  // Enable he dummy motor
+//  _motorControlerDummy->setEnabled(true);
+//  _motorControlerDummy->setMotorCurrentEnabled(true);
+
+//  // Set the calibration time to a nonzero value and proper end switch positions
+//  // -> Motor instance should be initialized with CalibrationMode::SIMPLE
+//  _motorControlerDummy->setCalibrationTime(123456U);
+//  _motorControlerDummy->setPositiveReferenceSwitchCalibration(1000);
+//  _motorControlerDummy->setNegativeReferenceSwitchCalibration(-1000);
+
+//  TestServer testServer;
+//  ChimeraTK::TestFacility testFacility;
+//  testFacility.runApplication();
+
+
+//  auto  trigger = testFacility.getScalar<uint64_t>("Trigger/tick");
+//  auto motorState  = testFacility.getScalar<std::string>("Motor/readback/status/state");
+
+//  trigger.write();
+//  testFacility.stepApplication();
+//  motorState.read();
+
+//  // Application should start with disabled motor
+//  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
+//                                                 static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::FULL));
+
+//}
