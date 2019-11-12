@@ -1,3 +1,1 @@
-DFMC-MD22 /dev/pciedevs4 md22_damc2_r1066.mapp
-DFMC-MD22-DUMMY DFMC_MD22_test.mapp DFMC_MD22_test.mapp
 STEPPER-MOTOR-DUMMY /dummy/MotorDriverCard DFMC_MD22_test.map
