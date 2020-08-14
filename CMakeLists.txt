@@ -10,13 +10,12 @@ include(cmake/add_dependency.cmake)
 add_dependency(ChimeraTK-ApplicationCore 01.00 REQUIRED)
 add_dependency(mtca4u-MotorDriverCard 01.09 REQUIRED)
 
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/set_default_build_to_release.cmake)
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/set_default_flags.cmake)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fPIC -Wextra -Wshadow -pedantic -Wuninitialized -Weffc++")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 --coverage")
+
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ChimeraTK-ApplicationCore_CXX_FLAGS} ${mtca4u-MotorDriverCard_CXX_FLAGS}" )
 
 # Install the header files, put them in the same directory as
 # the library as they are closely related
