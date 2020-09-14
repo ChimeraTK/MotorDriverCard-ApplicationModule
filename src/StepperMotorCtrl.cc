@@ -72,6 +72,9 @@ void ControlInputHandler::mainLoop() {
 
   inputGroup = this->readAnyGroup();
 
+  // Write once to propagate inital values
+  writeAll();
+
   while(true){
 
     notification.message = "";
