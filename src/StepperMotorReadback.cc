@@ -17,6 +17,8 @@ void ReadbackHandler::mainLoop(){
   readConstData();
 
   while(true){
+    writeAll();
+
     //Wait for cyclic trigger
     trigger.read();
 
@@ -40,8 +42,6 @@ void ReadbackHandler::mainLoop(){
     receiveTimer.measureOnce();
     auto rt = std::chrono::duration_cast<std::chrono::microseconds>(receiveTimer.getMeasurementResult());
     actualReceiveTime = static_cast<float>(rt.count())/1000.f;
-
-    writeAll();
   }
 }
 
