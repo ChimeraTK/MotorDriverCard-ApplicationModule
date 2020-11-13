@@ -66,6 +66,8 @@ void ControlInputHandler::prepare(){
     if(_motor->hasHWReferenceSwitches()){
       appendCalibrationToMap();
     }
+
+    writeAll();
 }
 
 void ControlInputHandler::mainLoop() {

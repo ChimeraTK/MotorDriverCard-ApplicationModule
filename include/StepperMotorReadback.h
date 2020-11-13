@@ -116,7 +116,9 @@ public:
   ScalarOutput<float> actualCycleTime{this, "actualCycleTime", "ms", "Actual cycle time by which the HW is being read", {"MOT_DIAG"}};
   ScalarOutput<float> actualReceiveTime{this, "actualReceiveTime", "ms", "Actual time required to read all variables in this module from the HW.", {"MOT_DIAG"}};
 
-  virtual void mainLoop() override;
+  void prepare() override { writeAll(); }
+
+  void mainLoop() override;
 
   Position position{this, "position", "Position data", false, {"MOTOR"}};
   Limit           speedLimit{this, "speedLimit", "Speed data", false, {"MOTOR"}};
