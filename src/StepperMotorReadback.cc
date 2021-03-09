@@ -14,10 +14,7 @@ namespace ChimeraTK { namespace MotorDriver {
     readConstData();
 
     while(true) {
-      writeAll();
-
-      //Wait for cyclic trigger
-      trigger.read();
+      //First calculate the initial values
 
       // FIXME This is only to evaluate the timer
       if(!execTimer.isInitialized()) {
@@ -39,6 +36,12 @@ namespace ChimeraTK { namespace MotorDriver {
       receiveTimer.measureOnce();
       auto rt = std::chrono::duration_cast<std::chrono::microseconds>(receiveTimer.getMeasurementResult());
       actualReceiveTime = static_cast<float>(rt.count()) / 1000.f;
+
+      //We now have all data. Write them
+      writeAll();
+
+      //Wait for cyclic trigger
+      trigger.read();
     }
   }
 

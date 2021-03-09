@@ -82,14 +82,12 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   auto motorState = testFacility.getScalar<std::string>("Motor/readback/status/state");
 
   // Enable he dummy motor
+  // FIXME: If the dummy is enabled here or not does not make a difference. The test still passes. Check the test code.
   _motorControlerDummy->setEnabled(true);
   _motorControlerDummy->setMotorCurrentEnabled(true);
 
-  trigger.write();
-  testFacility.stepApplication();
-  motorState.read();
-
-  // Application should start with disabled motor
+  // Application should start with disabled motor (initial value being send)
+  motorState.read(); // read initial value
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "disabled");
 
   // Enable stepper motor and set a reference position
