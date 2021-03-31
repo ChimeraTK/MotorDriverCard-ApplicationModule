@@ -37,8 +37,9 @@ void ControlInputHandler::createFunctionMap(std::shared_ptr<StepperMotor> motor)
   funcMap[control.enableAutostart.getId()]     = [this, motor]{ motor->setAutostart(control.enableAutostart);};
   funcMap[control.enableFullStepping.getId()]  = [this, motor]{ motor->enableFullStepping(control.enableFullStepping); };
 
-
-  funcMap[positionSetpoint.positionInSteps.getId()]         = [this, motor]{ _motor->setTargetPosition(positionSetpoint.positionInSteps); };
+  funcMap[positionSetpoint.positionInSteps.getId()] = [this, motor] {
+    _motor->setTargetPositionInSteps(positionSetpoint.positionInSteps);
+  };
   funcMap[positionSetpoint.position.getId()]                = [this, motor]{ _motor->setTargetPosition(positionSetpoint.position); };
   funcMap[positionSetpoint.relativePositionInSteps.getId()] = [this, motor]{ motor->moveRelativeInSteps(positionSetpoint.relativePositionInSteps); };
   funcMap[positionSetpoint.relativePosition.getId()]        = [this, motor]{ motor->moveRelative(positionSetpoint.relativePosition); };
