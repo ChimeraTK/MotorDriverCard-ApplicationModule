@@ -76,6 +76,8 @@ namespace ChimeraTK { namespace MotorDriver {
     status.isFullStepping = _motor->isFullStepping();
     status.autostartEnabled = _motor->getAutostart();
 
+    status.encoderReadoutMode = _motor->getEncoderReadoutMode();
+
     position.actualValueInSteps = _motor->getCurrentPositionInSteps();
     position.encoderReadback = _motor->getEncoderPosition();
     position.targetValueInSteps = _motor->getTargetPositionInSteps();
