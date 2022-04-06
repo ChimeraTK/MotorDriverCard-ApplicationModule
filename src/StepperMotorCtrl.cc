@@ -110,6 +110,11 @@ namespace ChimeraTK { namespace MotorDriver {
 
       auto changedVarId = inputGroup.readAny();
 
+      if(not _motor->isOpen()) {
+        std::cerr << "Motor device is in recovery, not doing control step" << std::endl;
+        continue;
+      }
+
       //FIXME Keep this only as long as we rely on the dummy for tests
       try {
         funcMap.at(changedVarId)();
