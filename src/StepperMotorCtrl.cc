@@ -15,9 +15,9 @@ namespace ChimeraTK { namespace MotorDriver {
   : ApplicationModule(owner, name, description), funcMap(), inputGroup(), _motor(motor) {
     // If motor has HW reference switches,
     // calibration is supported
-    if(_motor->hasHWReferenceSwitches()) {
-      control.calibrationCtrl =
-          CalibrationCommands{&control, "calibrationControl", "Calibration commands", true, {"MOTOR"}};
+    if(_motor->get()->hasHWReferenceSwitches()) {
+      control.calibrationCtrl = CalibrationCommands{
+          &control, "calibrationControl", "Calibration commands", HierarchyModifier::hideThis, {"MOTOR"}};
     }
   }
 
