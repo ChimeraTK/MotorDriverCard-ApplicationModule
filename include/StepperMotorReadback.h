@@ -109,8 +109,6 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarOutput<float> actualReceiveTime{this, "actualReceiveTime", "ms",
         "Actual time required to read all variables in this module from the HW.", {"MOT_DIAG"}};
 
-    void prepare() override { writeAll(); }
-
     struct : public VariableGroup {
       using VariableGroup::VariableGroup;
 

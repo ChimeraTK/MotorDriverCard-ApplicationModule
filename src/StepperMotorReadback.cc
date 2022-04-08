@@ -22,83 +22,80 @@ namespace ChimeraTK { namespace MotorDriver {
     deviceError.writeAll();
 
     while(true) {
-      //First calculate the initial values
-      try {
-        // FIXME This is only to evaluate the timer
-        if(!execTimer.isInitialized()) {
-          execTimer.initializeMeasurement();
-        }
-        else {
-          execTimer.measureIterativeMean();
-        }
-        auto ct = std::chrono::duration_cast<std::chrono::microseconds>(execTimer.getMeasurementResult());
-        actualCycleTime = static_cast<float>(ct.count()) / 1000.f;
-
-        receiveTimer.initializeMeasurement();
-
-        readback();
-        if(_motor->get()->hasHWReferenceSwitches()) {
-          readEndSwitchData();
-        }
-
-        receiveTimer.measureOnce();
-        auto rt = std::chrono::duration_cast<std::chrono::microseconds>(receiveTimer.getMeasurementResult());
-        actualReceiveTime = static_cast<float>(rt.count()) / 1000.f;
-
-        //We now have all data. Write them
-        writeAll();
-
-        // We have aparently communicated successfully. Reset the error counter
-        spiErrorCounter = 0;
-      }
-      catch(mtca4u::MotorDriverException& e) {
-        if((e.getID() == mtca4u::MotorDriverException::SPI_ERROR ||
-               e.getID() == mtca4u::MotorDriverException::SPI_TIMEOUT)) {
-          if(spiErrorCounter > SPI_RETRY_COUNT) {
-            std::cerr << "SPI failed..." << std::endl;
-            incrementDataFaultCounter();
-            _motor->close();
-            deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
-            deviceError.message = e.what();
-            deviceError.setCurrentVersionNumber({});
-            deviceError.writeAll();
+      if(_motor->isOpen()) {
+        //First calculate the initial values
+        try {
+          // FIXME This is only to evaluate the timer
+          if(!execTimer.isInitialized()) {
+            execTimer.initializeMeasurement();
           }
           else {
-            spiErrorCounter++;
+            execTimer.measureIterativeMean();
           }
-        }
-        else {
-          throw std::current_exception();
-        }
-      }
+          auto ct = std::chrono::duration_cast<std::chrono::microseconds>(execTimer.getMeasurementResult());
+          actualCycleTime = static_cast<float>(ct.count()) / 1000.f;
 
-      if(not _motor->isOpen()) {
-        std::cerr << "Starting device recovery for " << _motor->toString() << std::endl;
-        do {
-          try {
-            _motor->renew();
+          receiveTimer.initializeMeasurement();
+
+          readback();
+          if(_motor->get()->hasHWReferenceSwitches()) {
+            readEndSwitchData();
           }
-          catch(mtca4u::MotorDriverException& e) {
-            if(std::string(deviceError.message) != e.what()) {
+
+          receiveTimer.measureOnce();
+          auto rt = std::chrono::duration_cast<std::chrono::microseconds>(receiveTimer.getMeasurementResult());
+          actualReceiveTime = static_cast<float>(rt.count()) / 1000.f;
+
+          // We have aparently communicated successfully. Reset the error counter
+          spiErrorCounter = 0;
+        }
+        catch(mtca4u::MotorDriverException& e) {
+          if((e.getID() == mtca4u::MotorDriverException::SPI_ERROR ||
+                 e.getID() == mtca4u::MotorDriverException::SPI_TIMEOUT)) {
+            if(spiErrorCounter > SPI_RETRY_COUNT) {
+              std::cerr << "SPI failed..." << std::endl;
+              incrementDataFaultCounter();
+              _motor->close();
+              deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
               deviceError.message = e.what();
               deviceError.setCurrentVersionNumber({});
-              deviceError.message.write();
+              deviceError.writeAll();
+            }
+            else {
+              spiErrorCounter++;
             }
           }
-          boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
-        } while(not _motor->isOpen());
-        std::cerr << "device recovered: " << _motor->toString() << std::endl;
-
-        decrementDataFaultCounter();
-        deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
-        deviceError.message = "";
-        deviceError.setCurrentVersionNumber({});
-        deviceError.writeAll();
-        spiErrorCounter = 0;
+          else {
+            throw std::current_exception();
+          }
+        }
       }
+
+      //We now have all data. Write them, whether or not the read failed. this will set the validity properly.
+      writeAll();
 
       //Wait for cyclic trigger
       trigger.read();
+
+      if(not _motor->isOpen()) {
+        try {
+          _motor->renew();
+          std::cerr << "device recovered: " << _motor->toString() << std::endl;
+          decrementDataFaultCounter();
+          deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
+          deviceError.message = "";
+          deviceError.setCurrentVersionNumber({});
+          deviceError.writeAll();
+          spiErrorCounter = 0;
+        }
+        catch(mtca4u::MotorDriverException& e) {
+          if(std::string(deviceError.message) != e.what()) {
+            deviceError.message = e.what();
+            deviceError.setCurrentVersionNumber({});
+            deviceError.message.write();
+          }
+        }
+      }
     }
   }
 

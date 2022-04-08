@@ -46,10 +46,10 @@ namespace ChimeraTK { namespace MotorDriver {
     };
 
     funcMap[positionSetpoint.positionInSteps.getId()] = [this, motor] {
-      _motor->get()->setTargetPositionInSteps(positionSetpoint.positionInSteps);
+      motor->get()->setTargetPositionInSteps(positionSetpoint.positionInSteps);
     };
     funcMap[positionSetpoint.position.getId()] = [this, motor] {
-      _motor->get()->setTargetPosition(positionSetpoint.position);
+      motor->get()->setTargetPosition(positionSetpoint.position);
     };
     funcMap[positionSetpoint.relativePositionInSteps.getId()] = [this, motor] {
       motor->get()->moveRelativeInSteps(positionSetpoint.relativePositionInSteps);
