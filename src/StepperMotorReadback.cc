@@ -53,7 +53,7 @@ namespace ChimeraTK { namespace MotorDriver {
           if((e.getID() == mtca4u::MotorDriverException::SPI_ERROR ||
                  e.getID() == mtca4u::MotorDriverException::SPI_TIMEOUT)) {
             if(spiErrorCounter > SPI_RETRY_COUNT) {
-              std::cerr << "SPI failed..." << std::endl;
+              std::cerr << "motor device failed: " << _motor->toString() << std::endl;
               incrementDataFaultCounter();
               _motor->close();
               deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
