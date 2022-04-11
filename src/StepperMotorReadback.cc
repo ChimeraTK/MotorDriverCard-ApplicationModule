@@ -14,7 +14,7 @@ namespace ChimeraTK { namespace MotorDriver {
   void ReadbackHandler::mainLoop() {
     readConstData();
     unsigned int spiErrorCounter = 0;
-    const unsigned int SPI_RETRY_COUNT = 50;
+    const unsigned int SPI_RETRY_COUNT = 5;
 
     deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
     deviceError.message = "";
