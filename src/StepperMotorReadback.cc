@@ -66,7 +66,7 @@ namespace ChimeraTK { namespace MotorDriver {
             }
           }
           else {
-            throw std::current_exception();
+            std::rethrow_exception(std::current_exception());
           }
         }
       }
