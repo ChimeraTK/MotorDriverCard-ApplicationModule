@@ -69,6 +69,15 @@ namespace ChimeraTK { namespace MotorDriver {
             std::rethrow_exception(std::current_exception());
           }
         }
+        catch(ChimeraTK::runtime_error& e) {
+          std::cerr << "motor device failed: " << _motor->toString() << std::endl;
+          incrementDataFaultCounter();
+          _motor->close();
+          deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
+          deviceError.message = e.what();
+          deviceError.setCurrentVersionNumber({});
+          deviceError.writeAll();
+        }
       }
 
       //We now have all data. Write them, whether or not the read failed. this will set the validity properly.
