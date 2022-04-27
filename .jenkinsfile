@@ -1,0 +1,3 @@
+@Library('ChimeraTK') _
+env.CTESTOPTS="-j1"
+autojob(['ChimeraTK/DeviceAccess', 'ChimeraTK/MotorDriverCard'], 'https://github.com/ChimeraTK/MotorDriverCard-ApplicationModule')
