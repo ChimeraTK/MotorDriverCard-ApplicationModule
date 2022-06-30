@@ -58,12 +58,13 @@ struct TestFixture {
     mtca4u::MotorDriverCardFactory::instance().setDummyMode();
     ChimeraTK::setDMapFilePath("./MD22_on_DAMC2.dmap");
 
-    boost::shared_ptr<mtca4u::MotorDriverCard> mdc{mtca4u::MotorDriverCardFactory::instance().createMotorDriverCard(
-        stepperMotorDeviceName, moduleName, stepperMotorDeviceConfigFile)};
-
-    _motorControlerDummy = boost::dynamic_pointer_cast<mtca4u::MotorControlerDummy>(mdc->getMotorControler(0));
+    _motorDriverCard = mtca4u::MotorDriverCardFactory::instance().createMotorDriverCard(
+        stepperMotorDeviceName, moduleName, stepperMotorDeviceConfigFile);
+    _motorControlerDummy =
+        boost::dynamic_pointer_cast<mtca4u::MotorControlerDummy>(_motorDriverCard->getMotorControler(0));
   }
 
+  boost::shared_ptr<mtca4u::MotorDriverCard> _motorDriverCard;
   boost::shared_ptr<mtca4u::MotorControlerDummy> _motorControlerDummy;
 };
 
