@@ -37,8 +37,7 @@ struct TestServer : public ctk::Application {
   void defineConnections() override {
     motor = std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters);
 
-    cs["Trigger"]("tick") >> motor->readbackHandler("tick");
-    motor->findTag("MOTOR|MOT_DIAG").connectTo(cs["Motor"]);
+    findTag(".*").connectTo(cs);
 
     //      cs.dump();
     //      dumpConnections();
@@ -79,8 +78,8 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   ChimeraTK::TestFacility testFacility;
   testFacility.runApplication();
 
-  auto trigger = testFacility.getScalar<uint64_t>("Trigger/tick");
-  auto motorState = testFacility.getScalar<std::string>("Motor/readback/status/state");
+  auto trigger = testFacility.getScalar<uint64_t>("/Motor/readback/tick");
+  auto motorState = testFacility.getScalar<std::string>("/Motor/readback/status/state");
 
   // Enable he dummy motor
   // FIXME: If the dummy is enabled here or not does not make a difference. The test still passes. Check the test code.
@@ -123,7 +122,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "moving");
 
   // Move the dummy
-  // Afterwards target postion should be read back as actual value and system in state "idle"
+  // Afterwards target position should be read back as actual value and system in state "idle"
   _motorControlerDummy->moveTowardsTarget(1.f);
 
   trigger.write();
@@ -151,7 +150,7 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
   ChimeraTK::TestFacility testFacility;
   testFacility.runApplication();
 
-  auto trigger = testFacility.getScalar<uint64_t>("Trigger/tick");
+  auto trigger = testFacility.getScalar<uint64_t>("Motor/readback/tick");
   auto motorState = testFacility.getScalar<std::string>("Motor/readback/status/state");
 
   trigger.write();
@@ -183,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
 //  ChimeraTK::TestFacility testFacility;
 //  testFacility.runApplication();
 
-//  auto  trigger = testFacility.getScalar<uint64_t>("Trigger/tick");
+//  auto  trigger = testFacility.getScalar<uint64_t>("Motor/readback/tick");
 //  auto motorState  = testFacility.getScalar<std::string>("Motor/readback/status/state");
 
 //  trigger.write();
