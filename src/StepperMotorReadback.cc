@@ -9,12 +9,10 @@
 #include "ChimeraTK/MotorDriverCard/StepperMotorException.h"
 #include <mtca4u/MotorDriverCard/MotorDriverException.h>
 
-namespace ChimeraTK { namespace MotorDriver {
+namespace ChimeraTK::MotorDriver {
 
   void ReadbackHandler::mainLoop() {
     readConstData();
-    unsigned int spiErrorCounter = 0;
-    const unsigned int SPI_RETRY_COUNT = 5;
 
     deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
     deviceError.message = "";
@@ -24,60 +22,7 @@ namespace ChimeraTK { namespace MotorDriver {
     while(true) {
       if(_motor->isOpen()) {
         //First calculate the initial values
-        try {
-          // FIXME This is only to evaluate the timer
-          if(!execTimer.isInitialized()) {
-            execTimer.initializeMeasurement();
-          }
-          else {
-            execTimer.measureIterativeMean();
-          }
-          auto ct = std::chrono::duration_cast<std::chrono::microseconds>(execTimer.getMeasurementResult());
-          actualCycleTime = static_cast<float>(ct.count()) / 1000.f;
-
-          receiveTimer.initializeMeasurement();
-
-          readback();
-          if(_motor->get()->hasHWReferenceSwitches()) {
-            readEndSwitchData();
-          }
-
-          receiveTimer.measureOnce();
-          auto rt = std::chrono::duration_cast<std::chrono::microseconds>(receiveTimer.getMeasurementResult());
-          actualReceiveTime = static_cast<float>(rt.count()) / 1000.f;
-
-          // We have aparently communicated successfully. Reset the error counter
-          spiErrorCounter = 0;
-        }
-        catch(mtca4u::MotorDriverException& e) {
-          if((e.getID() == mtca4u::MotorDriverException::SPI_ERROR ||
-                 e.getID() == mtca4u::MotorDriverException::SPI_TIMEOUT)) {
-            if(spiErrorCounter > SPI_RETRY_COUNT) {
-              std::cerr << "motor device failed: " << _motor->toString() << std::endl;
-              incrementDataFaultCounter();
-              _motor->close();
-              deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
-              deviceError.message = e.what();
-              deviceError.setCurrentVersionNumber({});
-              deviceError.writeAll();
-            }
-            else {
-              spiErrorCounter++;
-            }
-          }
-          else {
-            std::rethrow_exception(std::current_exception());
-          }
-        }
-        catch(ChimeraTK::runtime_error& e) {
-          std::cerr << "motor device failed: " << _motor->toString() << std::endl;
-          incrementDataFaultCounter();
-          _motor->close();
-          deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
-          deviceError.message = e.what();
-          deviceError.setCurrentVersionNumber({});
-          deviceError.writeAll();
-        }
+        tryReadingFromMotor();
       }
 
       //We now have all data. Write them, whether or not the read failed. this will set the validity properly.
@@ -87,23 +32,7 @@ namespace ChimeraTK { namespace MotorDriver {
       trigger.read();
 
       if(not _motor->isOpen()) {
-        try {
-          _motor->renew();
-          std::cerr << "device recovered: " << _motor->toString() << std::endl;
-          decrementDataFaultCounter();
-          deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
-          deviceError.message = "";
-          deviceError.setCurrentVersionNumber({});
-          deviceError.writeAll();
-          spiErrorCounter = 0;
-        }
-        catch(mtca4u::MotorDriverException& e) {
-          if(std::string(deviceError.message) != e.what()) {
-            deviceError.message = e.what();
-            deviceError.setCurrentVersionNumber({});
-            deviceError.message.write();
-          }
-        }
+        tryMotorRenew();
       }
     }
   }
@@ -189,4 +118,80 @@ namespace ChimeraTK { namespace MotorDriver {
     return isDummy;
   }
 
-}} // namespace ChimeraTK::MotorDriver
+  void ReadbackHandler::tryMotorRenew() {
+    try {
+      _motor->renew();
+      std::cerr << "device recovered: " << _motor->toString() << std::endl;
+      decrementDataFaultCounter();
+      deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
+      deviceError.message = "";
+      deviceError.setCurrentVersionNumber({});
+      deviceError.writeAll();
+      spiErrorCounter = 0;
+    }
+    catch(mtca4u::MotorDriverException& e) {
+      if(std::string(deviceError.message) != e.what()) {
+        setStatusFromException(e);
+      }
+    }
+  }
+
+  void ReadbackHandler::tryReadingFromMotor() {
+    constexpr unsigned int SPI_RETRY_COUNT{5};
+    try {
+      // FIXME This is only to evaluate the timer
+      if(!execTimer.isInitialized()) {
+        execTimer.initializeMeasurement();
+      }
+      else {
+        execTimer.measureIterativeMean();
+      }
+      auto ct = std::chrono::duration_cast<std::chrono::microseconds>(execTimer.getMeasurementResult());
+      actualCycleTime = static_cast<float>(ct.count()) / 1000.f;
+
+      receiveTimer.initializeMeasurement();
+
+      readback();
+      if(_motor->get()->hasHWReferenceSwitches()) {
+        readEndSwitchData();
+      }
+
+      receiveTimer.measureOnce();
+      auto rt = std::chrono::duration_cast<std::chrono::microseconds>(receiveTimer.getMeasurementResult());
+      actualReceiveTime = static_cast<float>(rt.count()) / 1000.f;
+
+      // We have apparently communicated successfully. Reset the error counter
+      spiErrorCounter = 0;
+    }
+    catch(mtca4u::MotorDriverException& e) {
+      if((e.getID() == mtca4u::MotorDriverException::SPI_ERROR ||
+             e.getID() == mtca4u::MotorDriverException::SPI_TIMEOUT)) {
+        if(spiErrorCounter > SPI_RETRY_COUNT) {
+          std::cerr << "motor device failed: " << _motor->toString() << std::endl;
+          incrementDataFaultCounter();
+          _motor->close();
+          setStatusFromException(e);
+        }
+        else {
+          spiErrorCounter++;
+        }
+      }
+      else {
+        std::rethrow_exception(std::current_exception());
+      }
+    }
+    catch(ChimeraTK::runtime_error& e) {
+      std::cerr << "motor device failed: " << _motor->toString() << std::endl;
+      incrementDataFaultCounter();
+      _motor->close();
+      setStatusFromException(e);
+    }
+  }
+
+  void ReadbackHandler::setStatusFromException(const std::exception& e) {
+    deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
+    deviceError.message = e.what();
+    deviceError.setCurrentVersionNumber({});
+    deviceError.writeAll();
+  }
+} // namespace ChimeraTK::MotorDriver

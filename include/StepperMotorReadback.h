@@ -141,10 +141,15 @@ namespace ChimeraTK { namespace MotorDriver {
     std::shared_ptr<Motor> _motor;
     ExecutionTimer<> execTimer;
     ExecutionTimer<> receiveTimer;
+    unsigned int spiErrorCounter{0};
 
     /// Hack to prevent throwing when the motor dummy is used
     const bool _motorIsDummy;
     bool motorIsDummy();
+
+    void tryMotorRenew();
+    void tryReadingFromMotor();
+    void setStatusFromException(const std::exception& e);
   };
 
 }} // namespace ChimeraTK::MotorDriver
