@@ -87,7 +87,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   _motorControlerDummy->setMotorCurrentEnabled(true);
 
   // Application should start with disabled motor (initial value being send)
-  motorState.read(); // read initial value
+  // Directly check. Initial values are already received.
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "disabled");
 
   // Enable stepper motor and set a reference position
