@@ -141,14 +141,16 @@ namespace ChimeraTK { namespace MotorDriver {
     virtual void appendCalibrationToMap();
     funcmapT funcMap;
 
-    MotorControl control{this, "control", "Control words of the motor", false, {"MOTOR"}};
-    PositionSetpoint positionSetpoint{this, "positionSetpoint", "Position setpoints", false, {"MOTOR"}};
-    UserLimits userLimits{this, "userLimits", "User-definable limits", false, {"MOTOR"}};
-    SoftwareLimitCtrl swLimits{this, "swLimits", "Control data of SW limits", false, {"MOTOR"}};
+    MotorControl control{this, "control", "Control words of the motor", HierarchyModifier::none, {"MOTOR"}};
+    PositionSetpoint positionSetpoint{
+        this, "positionSetpoint", "Position setpoints", HierarchyModifier::none, {"MOTOR"}};
+    UserLimits userLimits{this, "userLimits", "User-definable limits", HierarchyModifier::none, {"MOTOR"}};
+    SoftwareLimitCtrl swLimits{this, "swLimits", "Control data of SW limits", HierarchyModifier::none, {"MOTOR"}};
     ReferenceSettings referenceSettings{
-        this, "referenceSettings", "Settings to define the position reference", false, {"MOTOR"}};
-    Notification notification{this, "notification", "User notification", false, {"MOTOR"}};
-    DummySignals dummySignals{this, "dummySignals", " Signals triggering the dummy motor", false, {"DUMMY"}};
+        this, "referenceSettings", "Settings to define the position reference", HierarchyModifier::none, {"MOTOR"}};
+    Notification notification{this, "notification", "User notification", HierarchyModifier::none, {"MOTOR"}};
+    DummySignals dummySignals{
+        this, "dummySignals", " Signals triggering the dummy motor", HierarchyModifier::none, {"DUMMY"}};
     //CalibrationCommands _calibrationCommands;
 
     // Callbacks for the BasiStepperMotor

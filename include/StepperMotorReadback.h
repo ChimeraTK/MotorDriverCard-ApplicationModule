@@ -111,11 +111,11 @@ namespace ChimeraTK { namespace MotorDriver {
 
     void mainLoop() override;
 
-    Position position{this, "position", "Position data", false, {"MOTOR"}};
-    Limit speedLimit{this, "speedLimit", "Speed data", false, {"MOTOR"}};
-    Limit currentLimit{this, "currentLimit", "Current data", false, {"MOTOR"}};
-    MotorStatus status{this, "status", "Status data of the motor driver", false, {"MOTOR"}};
-    SoftwareLimitStat swLimits{this, "swLimits", "Status data of SW limits", false, {"MOTOR"}};
+    Position position{this, "position", "Position data", HierarchyModifier::none, {"MOTOR"}};
+    Limit speedLimit{this, "speedLimit", "Speed data", HierarchyModifier::none, {"MOTOR"}};
+    Limit currentLimit{this, "currentLimit", "Current data", HierarchyModifier::none, {"MOTOR"}};
+    MotorStatus status{this, "status", "Status data of the motor driver", HierarchyModifier::none, {"MOTOR"}};
+    SoftwareLimitStat swLimits{this, "swLimits", "Status data of SW limits", HierarchyModifier::none, {"MOTOR"}};
     ReferenceSwitch positiveEndSwitch;
     ReferenceSwitch negativeEndSwitch;
 

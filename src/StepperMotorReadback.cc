@@ -50,10 +50,10 @@ namespace ChimeraTK { namespace MotorDriver {
   : ApplicationModule::ApplicationModule(owner, name, description), positiveEndSwitch{}, negativeEndSwitch{},
     readbackFunction{}, _motor{motor}, execTimer{}, receiveTimer{}, _motorIsDummy{motorIsDummy()} {
     if(_motor->hasHWReferenceSwitches()) {
-      positiveEndSwitch =
-          ReferenceSwitch{this, "positiveEndSwitch", "Data of the positive end switch", false, {"MOTOR"}};
-      negativeEndSwitch =
-          ReferenceSwitch{this, "negativeEndSwitch", "Data of the negative end switch", false, {"MOTOR"}};
+      positiveEndSwitch = ReferenceSwitch{
+          this, "positiveEndSwitch", "Data of the positive end switch", HierarchyModifier::none, {"MOTOR"}};
+      negativeEndSwitch = ReferenceSwitch{
+          this, "negativeEndSwitch", "Data of the negative end switch", HierarchyModifier::none, {"MOTOR"}};
     }
   }
 
