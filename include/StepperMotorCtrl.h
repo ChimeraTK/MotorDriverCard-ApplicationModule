@@ -18,6 +18,8 @@
 #include <memory>
 #include <utility>
 
+#include "Motor.h"
+
 namespace ChimeraTK { namespace MotorDriver {
   /**
  * A map between the TransferElementID of a PV and the associated
@@ -128,8 +130,8 @@ namespace ChimeraTK { namespace MotorDriver {
  */
   class ControlInputHandler : public ApplicationModule {
    public:
-    ControlInputHandler(EntityOwner* owner, const std::string& name, const std::string& description,
-        std::shared_ptr<StepperMotor> motor);
+    ControlInputHandler(
+        EntityOwner* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor);
 
     //virtual ~ControlInputHandler() {}
 
@@ -137,7 +139,7 @@ namespace ChimeraTK { namespace MotorDriver {
     virtual void mainLoop() override;
 
    private:
-    virtual void createFunctionMap(std::shared_ptr<StepperMotor> _motor);
+    virtual void createFunctionMap(std::shared_ptr<Motor> _motor);
     virtual void appendCalibrationToMap();
     funcmapT funcMap;
 
@@ -163,7 +165,7 @@ namespace ChimeraTK { namespace MotorDriver {
     void determineToleranceCallback();
 
     ReadAnyGroup inputGroup;
-    std::shared_ptr<StepperMotor> _motor;
+    std::shared_ptr<Motor> _motor;
 
   };   /* class ControlInputHandler */
 }}     // namespace ChimeraTK::MotorDriver

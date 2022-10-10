@@ -27,6 +27,8 @@ set(SRC StepperMotorModule.cc StepperMotorCtrl.cc StepperMotorReadback.cc)
 foreach(SOURCE ${SRC})
     set(LIBRARY_SOURCES ${LIBRARY_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/src/${SOURCE})
 endforeach()
+file(GLOB LIBRARY_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
+set(LIBRARY_SOURCES ${LIBRARY_SOURCES} ${LIBRARY_HEADERS})
 
 add_library(${PROJECT_NAME} SHARED ${LIBRARY_SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES 

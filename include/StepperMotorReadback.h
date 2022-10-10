@@ -14,6 +14,8 @@
 #include <ChimeraTK/MotorDriverCard/StepperMotor.h>
 #include "ExecutionTimer.h"
 
+#include "Motor.h"
+
 #include <functional>
 
 namespace ChimeraTK { namespace MotorDriver {
@@ -95,8 +97,8 @@ namespace ChimeraTK { namespace MotorDriver {
  */
   class ReadbackHandler : public ApplicationModule {
    public:
-    ReadbackHandler(std::shared_ptr<StepperMotor> motor, EntityOwner* owner, const std::string& name,
-        const std::string& description);
+    ReadbackHandler(
+        std::shared_ptr<Motor> motor, EntityOwner* owner, const std::string& name, const std::string& description);
 
     //ScalarPushInput<int> trigger{this, "trigger", "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
     ScalarPushInput<uint64_t> trigger{this, "tick", "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
@@ -107,7 +109,12 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarOutput<float> actualReceiveTime{this, "actualReceiveTime", "ms",
         "Actual time required to read all variables in this module from the HW.", {"MOT_DIAG"}};
 
-    void prepare() override { writeAll(); }
+    struct : public VariableGroup {
+      using VariableGroup::VariableGroup;
+
+      ScalarOutput<std::string> message{this, "message", "", ""};
+      ScalarOutput<int32_t> status{this, "status", "", ""};
+    } deviceError{this, "Device", "", HierarchyModifier::oneLevelUp, {"MOTOR"}};
 
     void mainLoop() override;
 
@@ -131,13 +138,18 @@ namespace ChimeraTK { namespace MotorDriver {
    */
     void readConstData();
 
-    std::shared_ptr<StepperMotor> _motor;
+    std::shared_ptr<Motor> _motor;
     ExecutionTimer<> execTimer;
     ExecutionTimer<> receiveTimer;
+    unsigned int spiErrorCounter{0};
 
     /// Hack to prevent throwing when the motor dummy is used
     const bool _motorIsDummy;
     bool motorIsDummy();
+
+    void tryMotorRenew();
+    void tryReadingFromMotor();
+    void setStatusFromException(const std::exception& e);
   };
 
 }} // namespace ChimeraTK::MotorDriver

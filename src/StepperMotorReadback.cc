@@ -7,15 +7,138 @@
 
 #include "StepperMotorReadback.h"
 #include "ChimeraTK/MotorDriverCard/StepperMotorException.h"
+#include <mtca4u/MotorDriverCard/MotorDriverException.h>
 
-namespace ChimeraTK { namespace MotorDriver {
+namespace ChimeraTK::MotorDriver {
 
   void ReadbackHandler::mainLoop() {
     readConstData();
 
-    while(true) {
-      //First calculate the initial values
+    deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
+    deviceError.message = "";
+    deviceError.setCurrentVersionNumber({});
+    deviceError.writeAll();
 
+    while(true) {
+      if(_motor->isOpen()) {
+        //First calculate the initial values
+        tryReadingFromMotor();
+      }
+
+      //We now have all data. Write them, whether or not the read failed. this will set the validity properly.
+      writeAll();
+
+      //Wait for cyclic trigger
+      trigger.read();
+
+      if(not _motor->isOpen()) {
+        tryMotorRenew();
+      }
+    }
+  }
+
+  ReadbackHandler::ReadbackHandler(
+      std::shared_ptr<Motor> motor, EntityOwner* owner, const std::string& name, const std::string& description)
+  : ApplicationModule::ApplicationModule(owner, name, description), positiveEndSwitch{}, negativeEndSwitch{},
+    readbackFunction{}, _motor{motor}, execTimer{}, receiveTimer{}, _motorIsDummy{motorIsDummy()} {
+    if(_motor->get()->hasHWReferenceSwitches()) {
+      positiveEndSwitch = ReferenceSwitch{
+          this, "positiveEndSwitch", "Data of the positive end switch", HierarchyModifier::none, {"MOTOR"}};
+      negativeEndSwitch = ReferenceSwitch{
+          this, "negativeEndSwitch", "Data of the negative end switch", HierarchyModifier::none, {"MOTOR"}};
+    }
+  }
+
+  void ReadbackHandler::readConstData() {
+    if(!_motorIsDummy) {
+      currentLimit.maxValue = _motor->get()->getSafeCurrentLimit();
+      speedLimit.maxValue = _motor->get()->getMaxSpeedCapability();
+    }
+  }
+
+  void ReadbackHandler::readback() {
+    status.isEnabled = _motor->get()->getEnabled();
+
+    auto calibMode = _motor->get()->getCalibrationMode();
+    auto error = _motor->get()->getError();
+
+    status.calibrationMode = static_cast<int>(calibMode);
+    status.errorId = static_cast<int32_t>(error);
+
+    status.isFullStepping = _motor->get()->isFullStepping();
+    status.autostartEnabled = _motor->get()->getAutostart();
+
+    status.encoderReadoutMode = _motor->get()->getEncoderReadoutMode();
+
+    position.actualValueInSteps = _motor->get()->getCurrentPositionInSteps();
+    position.encoderReadback = _motor->get()->getEncoderPosition();
+    position.targetValueInSteps = _motor->get()->getTargetPositionInSteps();
+
+    // Update values that have a static relation to HW readback
+    position.actualValue = _motor->get()->recalculateStepsInUnits(position.actualValueInSteps);
+    position.targetValue = _motor->get()->recalculateStepsInUnits(position.targetValueInSteps);
+
+    status.isIdle = _motor->get()->isSystemIdle();
+    status.state = _motor->get()->getState();
+    swLimits.isEnabled = _motor->get()->getSoftwareLimitsEnabled();
+    swLimits.maxPositionInSteps = _motor->get()->getMaxPositionLimitInSteps();
+    swLimits.minPositionInSteps = _motor->get()->getMinPositionLimitInSteps();
+    swLimits.maxPosition = _motor->get()->recalculateStepsInUnits(swLimits.maxPositionInSteps);
+    swLimits.minPosition = _motor->get()->recalculateStepsInUnits(swLimits.minPositionInSteps);
+
+    if(!_motorIsDummy) {
+      currentLimit.userValue = _motor->get()->getUserCurrentLimit(); // Include when this method gets implemented
+    }
+    speedLimit.userValue = _motor->get()->getUserSpeedLimit();
+  }
+
+  /// Reading data specific for motor with end switches
+  void ReadbackHandler::readEndSwitchData() {
+    negativeEndSwitch.isActive = _motor->get()->isNegativeReferenceActive();
+    positiveEndSwitch.isActive = _motor->get()->isPositiveReferenceActive();
+
+    positiveEndSwitch.positionInSteps = _motor->get()->getPositiveEndReferenceInSteps();
+    negativeEndSwitch.positionInSteps = _motor->get()->getNegativeEndReferenceInSteps();
+    positiveEndSwitch.position = _motor->get()->recalculateStepsInUnits(positiveEndSwitch.positionInSteps);
+    negativeEndSwitch.position = _motor->get()->recalculateStepsInUnits(negativeEndSwitch.positionInSteps);
+
+    positiveEndSwitch.tolerance = _motor->get()->getTolerancePositiveEndSwitch();
+    negativeEndSwitch.tolerance = _motor->get()->getToleranceNegativeEndSwitch();
+  }
+
+  bool ReadbackHandler::motorIsDummy() {
+    bool isDummy = false;
+    try {
+      // Throws if dummy is used
+      _motor->get()->getSafeCurrentLimit();
+    }
+    catch(StepperMotorException& e) {
+      if(e.getID() == StepperMotorException::FEATURE_NOT_AVAILABLE) isDummy = true;
+    }
+    return isDummy;
+  }
+
+  void ReadbackHandler::tryMotorRenew() {
+    try {
+      _motor->renew();
+      std::cerr << "device recovered: " << _motor->toString() << std::endl;
+      decrementDataFaultCounter();
+      deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
+      deviceError.message = "";
+      deviceError.setCurrentVersionNumber({});
+      deviceError.writeAll();
+      spiErrorCounter = 0;
+    }
+    catch(mtca4u::MotorDriverException& e) {
+      if(std::string(deviceError.message) != e.what()) {
+        setStatusFromException(e);
+      }
+    }
+  }
+
+  void ReadbackHandler::tryReadingFromMotor() {
+    constexpr unsigned int SPI_RETRY_COUNT{5};
+    try {
       // FIXME This is only to evaluate the timer
       if(!execTimer.isInitialized()) {
         execTimer.initializeMeasurement();
@@ -29,7 +152,7 @@ namespace ChimeraTK { namespace MotorDriver {
       receiveTimer.initializeMeasurement();
 
       readback();
-      if(_motor->hasHWReferenceSwitches()) {
+      if(_motor->get()->hasHWReferenceSwitches()) {
         readEndSwitchData();
       }
 
@@ -37,93 +160,38 @@ namespace ChimeraTK { namespace MotorDriver {
       auto rt = std::chrono::duration_cast<std::chrono::microseconds>(receiveTimer.getMeasurementResult());
       actualReceiveTime = static_cast<float>(rt.count()) / 1000.f;
 
-      //We now have all data. Write them
-      writeAll();
-
-      //Wait for cyclic trigger
-      trigger.read();
+      // We have apparently communicated successfully. Reset the error counter
+      spiErrorCounter = 0;
+    }
+    catch(mtca4u::MotorDriverException& e) {
+      if((e.getID() == mtca4u::MotorDriverException::SPI_ERROR ||
+             e.getID() == mtca4u::MotorDriverException::SPI_TIMEOUT)) {
+        if(spiErrorCounter > SPI_RETRY_COUNT) {
+          std::cerr << "motor device failed: " << _motor->toString() << std::endl;
+          incrementDataFaultCounter();
+          _motor->close();
+          setStatusFromException(e);
+        }
+        else {
+          spiErrorCounter++;
+        }
+      }
+      else {
+        std::rethrow_exception(std::current_exception());
+      }
+    }
+    catch(ChimeraTK::runtime_error& e) {
+      std::cerr << "motor device failed: " << _motor->toString() << std::endl;
+      incrementDataFaultCounter();
+      _motor->close();
+      setStatusFromException(e);
     }
   }
 
-  ReadbackHandler::ReadbackHandler(
-      std::shared_ptr<StepperMotor> motor, EntityOwner* owner, const std::string& name, const std::string& description)
-  : ApplicationModule::ApplicationModule(owner, name, description), positiveEndSwitch{}, negativeEndSwitch{},
-    readbackFunction{}, _motor{motor}, execTimer{}, receiveTimer{}, _motorIsDummy{motorIsDummy()} {
-    if(_motor->hasHWReferenceSwitches()) {
-      positiveEndSwitch = ReferenceSwitch{
-          this, "positiveEndSwitch", "Data of the positive end switch", HierarchyModifier::none, {"MOTOR"}};
-      negativeEndSwitch = ReferenceSwitch{
-          this, "negativeEndSwitch", "Data of the negative end switch", HierarchyModifier::none, {"MOTOR"}};
-    }
+  void ReadbackHandler::setStatusFromException(const std::exception& e) {
+    deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
+    deviceError.message = e.what();
+    deviceError.setCurrentVersionNumber({});
+    deviceError.writeAll();
   }
-
-  void ReadbackHandler::readConstData() {
-    if(!_motorIsDummy) {
-      currentLimit.maxValue = _motor->getSafeCurrentLimit();
-      speedLimit.maxValue = _motor->getMaxSpeedCapability();
-    }
-  }
-
-  void ReadbackHandler::readback() {
-    status.isEnabled = _motor->getEnabled();
-
-    auto calibMode = _motor->getCalibrationMode();
-    auto error = _motor->getError();
-
-    status.calibrationMode = static_cast<int>(calibMode);
-    status.errorId = static_cast<int32_t>(error);
-
-    status.isFullStepping = _motor->isFullStepping();
-    status.autostartEnabled = _motor->getAutostart();
-
-    status.encoderReadoutMode = _motor->getEncoderReadoutMode();
-
-    position.actualValueInSteps = _motor->getCurrentPositionInSteps();
-    position.encoderReadback = _motor->getEncoderPosition();
-    position.targetValueInSteps = _motor->getTargetPositionInSteps();
-
-    // Update values that have a static relation to HW readback
-    position.actualValue = _motor->recalculateStepsInUnits(position.actualValueInSteps);
-    position.targetValue = _motor->recalculateStepsInUnits(position.targetValueInSteps);
-
-    status.isIdle = _motor->isSystemIdle();
-    status.state = _motor->getState();
-    swLimits.isEnabled = _motor->getSoftwareLimitsEnabled();
-    swLimits.maxPositionInSteps = _motor->getMaxPositionLimitInSteps();
-    swLimits.minPositionInSteps = _motor->getMinPositionLimitInSteps();
-    swLimits.maxPosition = _motor->recalculateStepsInUnits(swLimits.maxPositionInSteps);
-    swLimits.minPosition = _motor->recalculateStepsInUnits(swLimits.minPositionInSteps);
-
-    if(!_motorIsDummy) {
-      currentLimit.userValue = _motor->getUserCurrentLimit(); // Include when this method gets implemented
-    }
-    speedLimit.userValue = _motor->getUserSpeedLimit();
-  }
-
-  /// Reading data specific for motor with end switches
-  void ReadbackHandler::readEndSwitchData() {
-    negativeEndSwitch.isActive = _motor->isNegativeReferenceActive();
-    positiveEndSwitch.isActive = _motor->isPositiveReferenceActive();
-
-    positiveEndSwitch.positionInSteps = _motor->getPositiveEndReferenceInSteps();
-    negativeEndSwitch.positionInSteps = _motor->getNegativeEndReferenceInSteps();
-    positiveEndSwitch.position = _motor->recalculateStepsInUnits(positiveEndSwitch.positionInSteps);
-    negativeEndSwitch.position = _motor->recalculateStepsInUnits(negativeEndSwitch.positionInSteps);
-
-    positiveEndSwitch.tolerance = _motor->getTolerancePositiveEndSwitch();
-    negativeEndSwitch.tolerance = _motor->getToleranceNegativeEndSwitch();
-  }
-
-  bool ReadbackHandler::motorIsDummy() {
-    bool isDummy = false;
-    try {
-      // Throws if dummy is used
-      _motor->getSafeCurrentLimit();
-    }
-    catch(StepperMotorException& e) {
-      if(e.getID() == StepperMotorException::FEATURE_NOT_AVAILABLE) isDummy = true;
-    }
-    return isDummy;
-  }
-
-}} // namespace ChimeraTK::MotorDriver
+} // namespace ChimeraTK::MotorDriver

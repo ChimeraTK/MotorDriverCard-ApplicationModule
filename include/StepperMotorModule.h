@@ -13,23 +13,20 @@
 
 #include "StepperMotorCtrl.h"
 #include "StepperMotorReadback.h"
+#include "Motor.h"
 
 #include <memory>
 
-namespace ChimeraTK {
-namespace MotorDriver {
+namespace ChimeraTK { namespace MotorDriver {
 
-struct StepperMotorModule : public ModuleGroup {
-  StepperMotorModule(EntityOwner *owner, const std::string &name, const std::string &description,
-                    const StepperMotorParameters &motorParameters,
-                    const std::unordered_set<std::string>& tags = {});
+  struct StepperMotorModule : public ModuleGroup {
+    StepperMotorModule(EntityOwner* owner, const std::string& name, const std::string& description,
+        const StepperMotorParameters& motorParameters, const std::unordered_set<std::string>& tags = {});
 
-  std::shared_ptr<StepperMotor> motor;
-  ControlInputHandler ctrlInputHandler;
-  ReadbackHandler readbackHandler;
-};
-} // namespace MotorDriver
-} // namespace ChimeraTK
-
+    std::shared_ptr<Motor> motor;
+    ControlInputHandler ctrlInputHandler;
+    ReadbackHandler readbackHandler;
+  };
+}} // namespace ChimeraTK::MotorDriver
 
 #endif /* INCLUDE_STEPPERMOTORMODULE_H_ */
