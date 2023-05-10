@@ -24,24 +24,15 @@ static const std::string moduleName("");
 
 // Test server
 struct TestServer : public ctk::Application {
-  TestServer() : ctk::Application("MotorDriverCard_ApplicationModule_TestServer") {}
+  TestServer() : ctk::Application("MotorDriverCard_ApplicationModule_TestServer") {
+    motor = std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters);
+  }
   ~TestServer() override { shutdown(); }
-
-  ctk::ControlSystemModule cs{};
 
   // Motor instance and parameters
   ctk::MotorDriver::StepperMotorParameters parameters = {
       ctk::MotorDriver::StepperMotorType::LINEAR, stepperMotorDeviceName, moduleName, 0U, stepperMotorDeviceConfigFile};
   std::unique_ptr<ctk::MotorDriver::StepperMotorModule> motor;
-
-  void defineConnections() override {
-    motor = std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters);
-
-    findTag(".*").connectTo(cs);
-
-    //      cs.dump();
-    //      dumpConnections();
-  }
 };
 
 /**
