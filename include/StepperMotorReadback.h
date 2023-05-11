@@ -97,11 +97,11 @@ namespace ChimeraTK { namespace MotorDriver {
  */
   class ReadbackHandler : public ApplicationModule {
    public:
-    ReadbackHandler(
-        std::shared_ptr<Motor> motor, EntityOwner* owner, const std::string& name, const std::string& description);
+    ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
+        const std::string& description, const std::string& triggerPath);
 
     //ScalarPushInput<int> trigger{this, "trigger", "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
-    ScalarPushInput<uint64_t> trigger{this, "tick", "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
+    ScalarPushInput<uint64_t> trigger;
 
     // Diagnostics
     ScalarOutput<float> actualCycleTime{
@@ -114,15 +114,15 @@ namespace ChimeraTK { namespace MotorDriver {
 
       ScalarOutput<std::string> message{this, "message", "", ""};
       ScalarOutput<int32_t> status{this, "status", "", ""};
-    } deviceError{this, "Device", "", HierarchyModifier::oneLevelUp, {"MOTOR"}};
+    } deviceError{this, "../Device", "", {"MOTOR"}};
 
     void mainLoop() override;
 
-    Position position{this, "position", "Position data", HierarchyModifier::none, {"MOTOR"}};
-    Limit speedLimit{this, "speedLimit", "Speed data", HierarchyModifier::none, {"MOTOR"}};
-    Limit currentLimit{this, "currentLimit", "Current data", HierarchyModifier::none, {"MOTOR"}};
-    MotorStatus status{this, "status", "Status data of the motor driver", HierarchyModifier::none, {"MOTOR"}};
-    SoftwareLimitStat swLimits{this, "swLimits", "Status data of SW limits", HierarchyModifier::none, {"MOTOR"}};
+    Position position{this, "position", "Position data", {"MOTOR"}};
+    Limit speedLimit{this, "speedLimit", "Speed data", {"MOTOR"}};
+    Limit currentLimit{this, "currentLimit", "Current data", {"MOTOR"}};
+    MotorStatus status{this, "status", "Status data of the motor driver", {"MOTOR"}};
+    SoftwareLimitStat swLimits{this, "swLimits", "Status data of SW limits", {"MOTOR"}};
     ReferenceSwitch positiveEndSwitch;
     ReferenceSwitch negativeEndSwitch;
 

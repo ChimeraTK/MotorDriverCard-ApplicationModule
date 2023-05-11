@@ -37,16 +37,17 @@ namespace ChimeraTK::MotorDriver {
     }
   }
 
-  ReadbackHandler::ReadbackHandler(
-      std::shared_ptr<Motor> motor, EntityOwner* owner, const std::string& name, const std::string& description)
+  ReadbackHandler::ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
+      const std::string& description, const std::string& triggerPath)
   : ApplicationModule::ApplicationModule(owner, name, description), positiveEndSwitch{}, negativeEndSwitch{},
     readbackFunction{}, _motor{motor}, execTimer{}, receiveTimer{}, _motorIsDummy{motorIsDummy()} {
     if(_motor->get()->hasHWReferenceSwitches()) {
       positiveEndSwitch = ReferenceSwitch{
-          this, "positiveEndSwitch", "Data of the positive end switch", HierarchyModifier::none, {"MOTOR"}};
+          this, "positiveEndSwitch", "Data of the positive end switch", {"MOTOR"}};
       negativeEndSwitch = ReferenceSwitch{
-          this, "negativeEndSwitch", "Data of the negative end switch", HierarchyModifier::none, {"MOTOR"}};
+          this, "negativeEndSwitch", "Data of the negative end switch", {"MOTOR"}};
     }
+    trigger = ScalarPushInput<uint64_t>{this, triggerPath, "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
   }
 
   void ReadbackHandler::readConstData() {

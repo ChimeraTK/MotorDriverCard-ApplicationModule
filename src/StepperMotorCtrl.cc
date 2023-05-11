@@ -11,13 +11,12 @@
 namespace ChimeraTK { namespace MotorDriver {
 
   ControlInputHandler::ControlInputHandler(
-      EntityOwner* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor)
+      ModuleGroup* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor)
   : ApplicationModule(owner, name, description), funcMap(), inputGroup(), _motor(motor) {
     // If motor has HW reference switches,
     // calibration is supported
     if(_motor->get()->hasHWReferenceSwitches()) {
-      control.calibrationCtrl = CalibrationCommands{
-          &control, "calibrationControl", "Calibration commands", HierarchyModifier::hideThis, {"MOTOR"}};
+      control.calibrationCtrl = CalibrationCommands{&control, ".", "Calibration commands", {"MOTOR"}};
     }
   }
 

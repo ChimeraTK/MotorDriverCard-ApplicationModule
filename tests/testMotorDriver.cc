@@ -25,7 +25,8 @@ static const std::string moduleName("");
 // Test server
 struct TestServer : public ctk::Application {
   TestServer() : ctk::Application("MotorDriverCard_ApplicationModule_TestServer") {
-    motor = std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters);
+    motor =
+        std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters, "/Motor/readback/tick");
   }
   ~TestServer() override { shutdown(); }
 
@@ -66,7 +67,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   std::cout << "testMoving" << std::endl;
 
   TestServer testServer;
-  ChimeraTK::TestFacility testFacility;
+  ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
   auto trigger = testFacility.getScalar<uint64_t>("/Motor/readback/tick");
@@ -138,7 +139,7 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
   _motorControlerDummy->setCalibrationTime(123456U);
 
   TestServer testServer;
-  ChimeraTK::TestFacility testFacility;
+  ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
   auto trigger = testFacility.getScalar<uint64_t>("Motor/readback/tick");

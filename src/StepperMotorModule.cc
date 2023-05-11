@@ -11,12 +11,12 @@
 namespace ChimeraTK {
 namespace MotorDriver {
 
-  StepperMotorModule::StepperMotorModule(EntityOwner* owner, const std::string& name, const std::string& description,
-      const StepperMotorParameters& motorParameters, const std::unordered_set<std::string>& tags)
-  : ModuleGroup(owner, name, description, HierarchyModifier::none, tags), motor{std::make_shared<Motor>(
-                                                                              motorParameters)},
+  StepperMotorModule::StepperMotorModule(ModuleGroup* owner, const std::string& name, const std::string& description,
+      const StepperMotorParameters& motorParameters, const std::string& triggerPath,
+      const std::unordered_set<std::string>& tags)
+  : ModuleGroup(owner, name, description, tags), motor{std::make_shared<Motor>(motorParameters)},
     ctrlInputHandler{this, "controlInput", "Handles the control input to the motor driver.", motor},
-    readbackHandler{motor, this, "readback", "Signals read from the motor driver"} {}
+    readbackHandler{motor, this, "readback", "Signals read from the motor driver", triggerPath} {}
 
 }
 }

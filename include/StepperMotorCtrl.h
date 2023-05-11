@@ -131,7 +131,7 @@ namespace ChimeraTK { namespace MotorDriver {
   class ControlInputHandler : public ApplicationModule {
    public:
     ControlInputHandler(
-        EntityOwner* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor);
+        ModuleGroup* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor);
 
     //virtual ~ControlInputHandler() {}
 
@@ -143,16 +143,16 @@ namespace ChimeraTK { namespace MotorDriver {
     virtual void appendCalibrationToMap();
     funcmapT funcMap;
 
-    MotorControl control{this, "control", "Control words of the motor", HierarchyModifier::none, {"MOTOR"}};
+    MotorControl control{this, "control", "Control words of the motor", {"MOTOR"}};
     PositionSetpoint positionSetpoint{
-        this, "positionSetpoint", "Position setpoints", HierarchyModifier::none, {"MOTOR"}};
-    UserLimits userLimits{this, "userLimits", "User-definable limits", HierarchyModifier::none, {"MOTOR"}};
-    SoftwareLimitCtrl swLimits{this, "swLimits", "Control data of SW limits", HierarchyModifier::none, {"MOTOR"}};
+        this, "positionSetpoint", "Position setpoints", {"MOTOR"}};
+    UserLimits userLimits{this, "userLimits", "User-definable limits", {"MOTOR"}};
+    SoftwareLimitCtrl swLimits{this, "swLimits", "Control data of SW limits", {"MOTOR"}};
     ReferenceSettings referenceSettings{
-        this, "referenceSettings", "Settings to define the position reference", HierarchyModifier::none, {"MOTOR"}};
-    Notification notification{this, "notification", "User notification", HierarchyModifier::none, {"MOTOR"}};
+        this, "referenceSettings", "Settings to define the position reference", {"MOTOR"}};
+    Notification notification{this, "notification", "User notification", {"MOTOR"}};
     DummySignals dummySignals{
-        this, "dummySignals", " Signals triggering the dummy motor", HierarchyModifier::none, {"DUMMY"}};
+        this, "dummySignals", " Signals triggering the dummy motor", {"DUMMY"}};
     //CalibrationCommands _calibrationCommands;
 
     // Callbacks for the BasiStepperMotor

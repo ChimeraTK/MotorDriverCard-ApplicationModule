@@ -20,8 +20,9 @@
 namespace ChimeraTK { namespace MotorDriver {
 
   struct StepperMotorModule : public ModuleGroup {
-    StepperMotorModule(EntityOwner* owner, const std::string& name, const std::string& description,
-        const StepperMotorParameters& motorParameters, const std::unordered_set<std::string>& tags = {});
+    StepperMotorModule(ModuleGroup* owner, const std::string& name, const std::string& description,
+        const StepperMotorParameters& motorParameters, const std::string& triggerPath,
+        const std::unordered_set<std::string>& tags = {});
 
     std::shared_ptr<Motor> motor;
     ControlInputHandler ctrlInputHandler;
