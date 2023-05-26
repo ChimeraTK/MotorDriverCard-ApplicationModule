@@ -1,13 +1,9 @@
-/*
- * StepperMotorReadback.cc
- *
- *  Created on: Sep 17, 2018
- *      Author: ckampm
- */
+// SPDX-FileCopyrightText: Deutsches Elektronen-Synchrotron DESY, MSK, ChimeraTK Project <chimeratk-support@desy.de>
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "StepperMotorReadback.h"
-#include "ChimeraTK/MotorDriverCard/StepperMotorException.h"
-#include <mtca4u/MotorDriverCard/MotorDriverException.h>
+
+#include <utility>
 
 namespace ChimeraTK::MotorDriver {
 
@@ -21,14 +17,14 @@ namespace ChimeraTK::MotorDriver {
 
     while(true) {
       if(_motor->isOpen()) {
-        //First calculate the initial values
+        // First calculate the initial values
         tryReadingFromMotor();
       }
 
-      //We now have all data. Write them, whether or not the read failed. this will set the validity properly.
+      // We now have all data. Write them, whether or not the read failed. this will set the validity properly.
       writeAll();
 
-      //Wait for cyclic trigger
+      // Wait for cyclic trigger
       trigger.read();
 
       if(not _motor->isOpen()) {
@@ -37,18 +33,20 @@ namespace ChimeraTK::MotorDriver {
     }
   }
 
+  /********************************************************************************************************************/
+
   ReadbackHandler::ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
       const std::string& description, const std::string& triggerPath)
-  : ApplicationModule::ApplicationModule(owner, name, description), positiveEndSwitch{}, negativeEndSwitch{},
-    readbackFunction{}, _motor{motor}, execTimer{}, receiveTimer{}, _motorIsDummy{motorIsDummy()} {
+  : ApplicationModule::ApplicationModule(owner, name, description), _motor{std::move(motor)}, _motorIsDummy{
+                                                                                                  motorIsDummy()} {
     if(_motor->get()->hasHWReferenceSwitches()) {
-      positiveEndSwitch = ReferenceSwitch{
-          this, "positiveEndSwitch", "Data of the positive end switch", {"MOTOR"}};
-      negativeEndSwitch = ReferenceSwitch{
-          this, "negativeEndSwitch", "Data of the negative end switch", {"MOTOR"}};
+      positiveEndSwitch = ReferenceSwitch{this, "positiveEndSwitch", "Data of the positive end switch", {"MOTOR"}};
+      negativeEndSwitch = ReferenceSwitch{this, "negativeEndSwitch", "Data of the negative end switch", {"MOTOR"}};
     }
     trigger = ScalarPushInput<uint64_t>{this, triggerPath, "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
   }
+
+  /********************************************************************************************************************/
 
   void ReadbackHandler::readConstData() {
     if(!_motorIsDummy) {
@@ -56,6 +54,8 @@ namespace ChimeraTK::MotorDriver {
       speedLimit.maxValue = _motor->get()->getMaxSpeedCapability();
     }
   }
+
+  /********************************************************************************************************************/
 
   void ReadbackHandler::readback() {
     status.isEnabled = _motor->get()->getEnabled();
@@ -93,6 +93,8 @@ namespace ChimeraTK::MotorDriver {
     speedLimit.userValue = _motor->get()->getUserSpeedLimit();
   }
 
+  /********************************************************************************************************************/
+
   /// Reading data specific for motor with end switches
   void ReadbackHandler::readEndSwitchData() {
     negativeEndSwitch.isActive = _motor->get()->isNegativeReferenceActive();
@@ -107,17 +109,21 @@ namespace ChimeraTK::MotorDriver {
     negativeEndSwitch.tolerance = _motor->get()->getToleranceNegativeEndSwitch();
   }
 
-  bool ReadbackHandler::motorIsDummy() {
+  /********************************************************************************************************************/
+
+  bool ReadbackHandler::motorIsDummy() const {
     bool isDummy = false;
     try {
       // Throws if dummy is used
       _motor->get()->getSafeCurrentLimit();
     }
-    catch(StepperMotorException& e) {
-      if(e.getID() == StepperMotorException::FEATURE_NOT_AVAILABLE) isDummy = true;
+    catch(ChimeraTK::logic_error&) {
+      isDummy = true;
     }
     return isDummy;
   }
+
+  /********************************************************************************************************************/
 
   void ReadbackHandler::tryMotorRenew() {
     try {
@@ -128,66 +134,58 @@ namespace ChimeraTK::MotorDriver {
       deviceError.message = "";
       deviceError.setCurrentVersionNumber({});
       deviceError.writeAll();
-      spiErrorCounter = 0;
+      _spiErrorCounter = 0;
     }
-    catch(mtca4u::MotorDriverException& e) {
+    catch(ChimeraTK::runtime_error& e) {
       if(std::string(deviceError.message) != e.what()) {
         setStatusFromException(e);
       }
     }
   }
 
+  /********************************************************************************************************************/
+
   void ReadbackHandler::tryReadingFromMotor() {
     constexpr unsigned int SPI_RETRY_COUNT{5};
     try {
       // FIXME This is only to evaluate the timer
-      if(!execTimer.isInitialized()) {
-        execTimer.initializeMeasurement();
+      if(!_execTimer.isInitialized()) {
+        _execTimer.initializeMeasurement();
       }
       else {
-        execTimer.measureIterativeMean();
+        _execTimer.measureIterativeMean();
       }
-      auto ct = std::chrono::duration_cast<std::chrono::microseconds>(execTimer.getMeasurementResult());
-      actualCycleTime = static_cast<float>(ct.count()) / 1000.f;
+      auto ct = std::chrono::duration_cast<std::chrono::microseconds>(_execTimer.getMeasurementResult());
+      actualCycleTime = static_cast<float>(ct.count()) / 1000.F;
 
-      receiveTimer.initializeMeasurement();
+      _receiveTimer.initializeMeasurement();
 
       readback();
       if(_motor->get()->hasHWReferenceSwitches()) {
         readEndSwitchData();
       }
 
-      receiveTimer.measureOnce();
-      auto rt = std::chrono::duration_cast<std::chrono::microseconds>(receiveTimer.getMeasurementResult());
-      actualReceiveTime = static_cast<float>(rt.count()) / 1000.f;
+      _receiveTimer.measureOnce();
+      auto rt = std::chrono::duration_cast<std::chrono::microseconds>(_receiveTimer.getMeasurementResult());
+      actualReceiveTime = static_cast<float>(rt.count()) / 1000.F;
 
       // We have apparently communicated successfully. Reset the error counter
-      spiErrorCounter = 0;
-    }
-    catch(mtca4u::MotorDriverException& e) {
-      if((e.getID() == mtca4u::MotorDriverException::SPI_ERROR ||
-             e.getID() == mtca4u::MotorDriverException::SPI_TIMEOUT)) {
-        if(spiErrorCounter > SPI_RETRY_COUNT) {
-          std::cerr << "motor device failed: " << _motor->toString() << std::endl;
-          incrementDataFaultCounter();
-          _motor->close();
-          setStatusFromException(e);
-        }
-        else {
-          spiErrorCounter++;
-        }
-      }
-      else {
-        std::rethrow_exception(std::current_exception());
-      }
+      _spiErrorCounter = 0;
     }
     catch(ChimeraTK::runtime_error& e) {
-      std::cerr << "motor device failed: " << _motor->toString() << std::endl;
-      incrementDataFaultCounter();
-      _motor->close();
-      setStatusFromException(e);
+      if(_spiErrorCounter > SPI_RETRY_COUNT) {
+        std::cerr << "motor device failed: " << _motor->toString() << std::endl;
+        incrementDataFaultCounter();
+        _motor->close();
+        setStatusFromException(e);
+      }
+      else {
+        _spiErrorCounter++;
+      }
     }
   }
+
+  /********************************************************************************************************************/
 
   void ReadbackHandler::setStatusFromException(const std::exception& e) {
     deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);

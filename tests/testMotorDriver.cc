@@ -1,12 +1,15 @@
+// SPDX-FileCopyrightText: Deutsches Elektronen-Synchrotron DESY, MSK, ChimeraTK Project <chimeratk-support@desy.de>
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 // Define a name for the test module.
 #define BOOST_TEST_MODULE testMotorDriverCard_ApplicationModule
 // Only after defining the name include the unit test header.
-#include <boost/test/included/unit_test.hpp>
-
 #include "StepperMotorModule.h"
 
 #include <ChimeraTK/ApplicationCore/ApplicationCore.h>
 #include <ChimeraTK/ApplicationCore/TestFacility.h>
+
+#include <boost/test/included/unit_test.hpp>
 
 // Includes to use to dummy motor
 #include "mtca4u/MotorDriverCard/MotorControlerDummy.h"
@@ -17,10 +20,8 @@
 
 namespace ctk = ChimeraTK;
 
-static const std::string stepperMotorDeviceName("STEPPER-MOTOR-DUMMY");
-static const std::string stepperMotorDeviceConfigFile("VT21-MotorDriverCardConfig.xml");
-static const std::string dmapPath(".");
-static const std::string moduleName("");
+constexpr char STEPPER_MOTOR_DEVICE_NAME[] = "STEPPER-MOTOR-DUMMY";
+constexpr char STEPPER_MOTOR_DEVICE_CONFIG_FILE[] = "VT21-MotorDriverCardConfig.xml";
 
 // Test server
 struct TestServer : public ctk::Application {
@@ -32,7 +33,7 @@ struct TestServer : public ctk::Application {
 
   // Motor instance and parameters
   ctk::MotorDriver::StepperMotorParameters parameters = {
-      ctk::MotorDriver::StepperMotorType::LINEAR, stepperMotorDeviceName, moduleName, 0U, stepperMotorDeviceConfigFile};
+      ctk::MotorDriver::StepperMotorType::LINEAR, STEPPER_MOTOR_DEVICE_NAME, {}, 0U, STEPPER_MOTOR_DEVICE_CONFIG_FILE};
   std::unique_ptr<ctk::MotorDriver::StepperMotorModule> motor;
 };
 
@@ -50,7 +51,7 @@ struct TestFixture {
     ChimeraTK::setDMapFilePath("./MD22_on_DAMC2.dmap");
 
     _motorDriverCard = mtca4u::MotorDriverCardFactory::instance().createMotorDriverCard(
-        stepperMotorDeviceName, moduleName, stepperMotorDeviceConfigFile);
+        STEPPER_MOTOR_DEVICE_NAME, {}, STEPPER_MOTOR_DEVICE_CONFIG_FILE);
     _motorControlerDummy =
         boost::dynamic_pointer_cast<mtca4u::MotorControlerDummy>(_motorDriverCard->getMotorControler(0));
   }
@@ -115,7 +116,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
 
   // Move the dummy
   // Afterwards target position should be read back as actual value and system in state "idle"
-  _motorControlerDummy->moveTowardsTarget(1.f);
+  _motorControlerDummy->moveTowardsTarget(1.F);
 
   trigger.write();
   testFacility.stepApplication();
@@ -152,12 +153,13 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
   // Application should start with disabled motor
   // We currently have to test for FULL instead of SIMPLE, because the MotorControlerDummy does
   // not yet support storage of the calibration  (TODO, See MotorDriverCard issue #9).
-  //BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"), static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::FULL));
+  // BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
+  // static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::FULL));
 }
 
 // TODO Add test for CalibrationMode::FULL, when MotorControlerDummy supports this
 //      (See MotorDriverCard issue #9).
-//BOOST_FIXTURE_TEST_CASE(testStartup, TestFixture){
+// BOOST_FIXTURE_TEST_CASE(testStartup, TestFixture){
 //  std::cout << "testStartup (calibration mode FULL)" << std::endl;
 
 //  // Enable he dummy motor

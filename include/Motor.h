@@ -1,15 +1,17 @@
+// SPDX-FileCopyrightText: Deutsches Elektronen-Synchrotron DESY, MSK, ChimeraTK Project <chimeratk-support@desy.de>
+// SPDX-License-Identifier: LGPL-3.0-or-later
 #pragma once
 
 #include <ChimeraTK/ApplicationCore/ApplicationCore.h>
 #include <ChimeraTK/MotorDriverCard/StepperMotor.h>
 
-namespace ChimeraTK { namespace MotorDriver {
+namespace ChimeraTK::MotorDriver {
   class Motor {
    public:
-    Motor(const StepperMotorParameters& parameters) : _parameters(parameters) { renew(); }
+    explicit Motor(StepperMotorParameters parameters) : _parameters(std::move(parameters)) { renew(); }
 
     void renew() {
-      // Drop reference to
+      // Drop our reference to the StepperMotor. This should free the motor and the factory should give us a new one
       _motor.reset();
       _motor = StepperMotorFactory::instance().create(_parameters);
       _open = true;
@@ -22,9 +24,9 @@ namespace ChimeraTK { namespace MotorDriver {
 
     std::shared_ptr<StepperMotor> get() { return _motor; }
 
-    bool isOpen() { return _open; }
+    [[nodiscard]] bool isOpen() const { return _open; }
 
-    std::string toString() {
+    [[nodiscard]] std::string toString() const {
       return _parameters.deviceName + ":" + _parameters.moduleName + ":" + std::to_string(_parameters.driverId);
     }
 
@@ -33,4 +35,4 @@ namespace ChimeraTK { namespace MotorDriver {
     StepperMotorParameters _parameters;
     bool _open{false};
   };
-}} // namespace ChimeraTK::MotorDriver
+} // namespace ChimeraTK::MotorDriver

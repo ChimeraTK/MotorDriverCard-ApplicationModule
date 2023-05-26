@@ -1,24 +1,17 @@
-/*
- * StepperMotorModule.h
- *
- *  Created on: Jul 16, 2018
- *      Author: ckampm
- */
+// SPDX-FileCopyrightText: Deutsches Elektronen-Synchrotron DESY, MSK, ChimeraTK Project <chimeratk-support@desy.de>
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#pragma once
 
-#ifndef INCLUDE_STEPPERMOTORMODULE_H_
-#define INCLUDE_STEPPERMOTORMODULE_H_
+#include "Motor.h"
+#include "StepperMotorCtrl.h"
+#include "StepperMotorReadback.h"
 
 #include <ChimeraTK/ApplicationCore/ApplicationCore.h>
 #include <ChimeraTK/MotorDriverCard/StepperMotor.h>
 
-#include "StepperMotorCtrl.h"
-#include "StepperMotorReadback.h"
-#include "Motor.h"
-
 #include <memory>
 
-namespace ChimeraTK { namespace MotorDriver {
-
+namespace ChimeraTK::MotorDriver {
   struct StepperMotorModule : public ModuleGroup {
     StepperMotorModule(ModuleGroup* owner, const std::string& name, const std::string& description,
         const StepperMotorParameters& motorParameters, const std::string& triggerPath,
@@ -28,6 +21,4 @@ namespace ChimeraTK { namespace MotorDriver {
     ControlInputHandler ctrlInputHandler;
     ReadbackHandler readbackHandler;
   };
-}} // namespace ChimeraTK::MotorDriver
-
-#endif /* INCLUDE_STEPPERMOTORMODULE_H_ */
+} // namespace ChimeraTK::MotorDriver
