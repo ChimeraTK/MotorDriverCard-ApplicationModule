@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.16)
 include(GNUInstallDirs)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 00)
-set(${PROJECT_NAME}_MINOR_VERSION 05)
+set(${PROJECT_NAME}_MINOR_VERSION 06)
 set(${PROJECT_NAME}_PATCH_VERSION 00)
 include(cmake/set_version_numbers.cmake)
 
