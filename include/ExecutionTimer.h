@@ -1,102 +1,103 @@
-#ifndef EXECUTION_TIMER_H
-#define EXECUTION_TIMER_H
+// SPDX-FileCopyrightText: Deutsches Elektronen-Synchrotron DESY, MSK, ChimeraTK Project <chimeratk-support@desy.de>
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#pragma once
 
-#include <iostream>
 #include <chrono>
-#include <vector>
+#include <iostream>
 #include <ratio>
+#include <vector>
 
+namespace detail {
 
-template <typename clockT = std::chrono::steady_clock, class durationT = typename clockT::duration>
-class ExecutionTimer {
+  template<typename clockT = std::chrono::steady_clock, class durationT = typename clockT::duration>
+  class ExecutionTimer {
+   public:
+    ExecutionTimer() = default;
+    ~ExecutionTimer() = default;
+    void getClockProperties() const;
+    void sample();
+    void initializeMeasurement();
 
-    std::vector<std::chrono::microseconds> samples;
-    typename clockT::duration period, overhead;
-    typename clockT::time_point previousSample;
-    durationT measurement_result;
-    bool measurementInitialized = false;
-    int64_t nIterations;
+    [[nodiscard]] bool isInitialized() const { return _measurementInitialized; }
 
-  public:
-    ExecutionTimer()
-      : samples{},
-        period{},
-        overhead{},
-        previousSample{},
-        measurement_result{0},
-        nIterations{0}{}
+    /********************************************************************************************************************/
 
-    ~ExecutionTimer(){}
-    void getClockProperties(void);
-    void sample(void);
-    void initializeMeasurement(void);
-
-    bool isInitialized(void){
-      return measurementInitialized;
+    // Measure a single execution step
+    void measureOnce() {
+      if(_measurementInitialized) {
+        _period = clockT::now() - _previousSample;
+      }
+      _measurementInitialized = false;
     }
 
-    // Measure a single execution step 
-    void measureOnce(void){
-        if(measurementInitialized){
-            period = clockT::now() - previousSample;    
-        }
-        measurementInitialized = false;
-    };
+    /********************************************************************************************************************/
 
     // Measure multiple execution cycles and take iterative mean
-    void measureIterativeMean(void){
-        if(measurementInitialized){
-            nIterations++;
-            auto now = clockT::now();
-            period = period + (now - previousSample - period)/nIterations;
+    void measureIterativeMean() {
+      if(_measurementInitialized) {
+        _nIterations++;
+        auto now = clockT::now();
+        _period = _period + (now - _previousSample - _period) / _nIterations;
 
-            previousSample = clockT::now();
-            overhead = previousSample - now;
-        }
-    };
+        _previousSample = clockT::now();
+        _overhead = _previousSample - now;
+      }
+    }
+
+    /********************************************************************************************************************/
 
     // Get current measurement result
-    durationT getMeasurementResult(){
-        return std::chrono::duration_cast<durationT>(period);
-    };
+    [[nodiscard]] durationT getMeasurementResult() const { return std::chrono::duration_cast<durationT>(_period); }
+
+    /********************************************************************************************************************/
 
     // Prints measurement result to stdout
-    void printMeasurementResult(){
-        std::cout << "Execution time: " << std::chrono::duration_cast<durationT>(period).count() 
-                  << std::endl;
-    };
+    void printMeasurementResult() const {
+      std::cout << "Execution time: " << std::chrono::duration_cast<durationT>(_period).count() << std::endl;
+    }
+
+    /********************************************************************************************************************/
 
     // Print overhead in iterative measurement
-    void printMeasurementOverhead(void){
-        std::cout << "Overhead in iterative measurement was: " 
-                  << std::chrono::duration_cast<durationT>(overhead).count()
-                  << std::endl;
-    };
-};
+    void printMeasurementOverhead() const {
+      std::cout << "Overhead in iterative measurement was: " << std::chrono::duration_cast<durationT>(_overhead).count()
+                << std::endl;
+    }
 
+   private:
+    std::vector<std::chrono::microseconds> _samples{};
+    typename clockT::duration _period{};
+    typename clockT::duration _overhead{};
+    typename clockT::time_point _previousSample{};
+    durationT _measurementResult{0};
+    bool _measurementInitialized{false};
+    int64_t _nIterations{0};
+  };
+} // namespace detail
 
+/********************************************************************************************************************/
+/* Implementations                                                                                                  */
+/********************************************************************************************************************/
 
-template <typename clockT, class durationT>
-void ExecutionTimer<clockT, durationT>::getClockProperties(){
-
-    double prec = static_cast<double>(clockT::period::num)/clockT::period::den;
-    std::cout << "Precision: " << prec << std::endl
-              << "Is steady: " << std::boolalpha << clockT::is_steady << std::endl;
+template<typename clockT, class durationT>
+void detail::ExecutionTimer<clockT, durationT>::getClockProperties() const {
+  double prec = static_cast<double>(clockT::period::num) / clockT::period::den;
+  std::cout << "Precision: " << prec << std::endl << "Is steady: " << std::boolalpha << clockT::is_steady << std::endl;
 }
 
-template <typename clockT, class durationT>
-void ExecutionTimer<clockT, durationT>::sample(){
-    samples.push_back(clockT::now());
+/********************************************************************************************************************/
+
+template<typename clockT, class durationT>
+void detail::ExecutionTimer<clockT, durationT>::sample() {
+  _samples.push_back(clockT::now());
 }
 
-template <typename clockT, class durationT>
-void ExecutionTimer<clockT, durationT>::initializeMeasurement(void){
+/********************************************************************************************************************/
 
-    nIterations = 0;
-    period = durationT(0);
-    previousSample = clockT::now();
-    measurementInitialized = true;
+template<typename clockT, class durationT>
+void detail::ExecutionTimer<clockT, durationT>::initializeMeasurement() {
+  _nIterations = 0;
+  _period = durationT(0);
+  _previousSample = clockT::now();
+  _measurementInitialized = true;
 }
-
-
-#endif // EXECUTION_TIMER_H 

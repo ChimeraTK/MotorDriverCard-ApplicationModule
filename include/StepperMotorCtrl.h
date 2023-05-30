@@ -1,33 +1,20 @@
-/*
- * StepperMotorCtrl.h
- *
- *  Created on: Sep 13, 2018
- *      Author: ckampm
- */
-
-#ifndef INCLUDE_STEPPERMOTORCTRL_H_
-#define INCLUDE_STEPPERMOTORCTRL_H_
-
-#include <ChimeraTK/ApplicationCore/ApplicationCore.h>
-#include <ChimeraTK/ReadAnyGroup.h>
-#include <ChimeraTK/MotorDriverCard/StepperMotor.h>
-#include <ChimeraTK/MotorDriverCard/LinearStepperMotor.h>
-
-#include <map>
-#include <functional>
-#include <memory>
-#include <utility>
+// SPDX-FileCopyrightText: Deutsches Elektronen-Synchrotron DESY, MSK, ChimeraTK Project <chimeratk-support@desy.de>
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#pragma once
 
 #include "Motor.h"
 
-namespace ChimeraTK { namespace MotorDriver {
-  /**
- * A map between the TransferElementID of a PV and the associated
- * function of the MotorDriverCard library. This allows to pass on
- * the changed PV to the library by the ID returned from readAny().
- */
-  using funcmapT = std::map<TransferElementID, std::function<void(void)>>;
+#include <ChimeraTK/ApplicationCore/ApplicationCore.h>
+#include <ChimeraTK/MotorDriverCard/LinearStepperMotor.h>
+#include <ChimeraTK/MotorDriverCard/StepperMotor.h>
+#include <ChimeraTK/ReadAnyGroup.h>
 
+#include <functional>
+#include <map>
+#include <memory>
+#include <utility>
+
+namespace ChimeraTK::MotorDriver {
   /// Calibration related inputs, only available for motors with HW end reference switches
   struct CalibrationCommands : public VariableGroup {
     using VariableGroup::VariableGroup;
@@ -36,6 +23,8 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarPushInput<int32_t> determineTolerance{
         this, "determineTolerance", "", "Determines tolerance of the end switch positions"};
   };
+
+  /********************************************************************************************************************/
 
   /// Motor control data
   struct MotorControl : public VariableGroup {
@@ -56,6 +45,8 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarPushInput<int> enableAutostart{this, "enableAutostart", "", "Sets the autostart flag of the motor driver"};
   };
 
+  /********************************************************************************************************************/
+
   ///  Position setpoints
   struct PositionSetpoint : public VariableGroup {
     using VariableGroup::VariableGroup;
@@ -68,6 +59,8 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarPushInput<float> relativePosition{
         this, "relativePosition", "", "Initiates a movement relative to the current position"};
   };
+
+  /********************************************************************************************************************/
 
   /// Contains settings to define and shift the position reference
   struct ReferenceSettings : public VariableGroup {
@@ -87,6 +80,8 @@ namespace ChimeraTK { namespace MotorDriver {
         this, "axisTranslation", "", "Offset to translate axis, i.e. shift the reference point."};
   };
 
+  /********************************************************************************************************************/
+
   /// Control of the software limits
   struct SoftwareLimitCtrl : public VariableGroup {
     using VariableGroup::VariableGroup;
@@ -98,6 +93,8 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarPushInput<int> minPositionInSteps{this, "minPositionInSteps", "", "Negative SW position limit"};
   };
 
+  /********************************************************************************************************************/
+
   /// Notifications to the user
   struct Notification : public VariableGroup {
     using VariableGroup::VariableGroup;
@@ -106,6 +103,8 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarOutput<std::string> message{this, "message", "", "Message for user notification from ControlInput module"};
   };
 
+  /********************************************************************************************************************/
+
   /// User-definable limits
   struct UserLimits : public VariableGroup {
     using VariableGroup::VariableGroup;
@@ -113,6 +112,8 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarPushInput<double> current{this, "current", "A", "User current limit for the motor"};
     ScalarPushInput<double> speed{this, "speed", "", "User speed limit for the motor"};
   };
+
+  /********************************************************************************************************************/
 
   /// Signals triggering the dummy motor
   struct DummySignals : public VariableGroup {
@@ -123,50 +124,52 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarOutput<int32_t> dummyMotorStop{this, "dummyMotorStop", "", "Stops the dummy motor"};
   };
 
+  /********************************************************************************************************************/
+
   /**
- *  @class ControlInputHandlerImpl
- *  @details Contains the implementation of the ControlInputHandler as a template so it can be used
- *           with a specific motor and set of inputs.
- */
+   *  @class ControlInputHandlerImpl
+   *  @details Contains the implementation of the ControlInputHandler as a template so it can be used
+   *           with a specific motor and set of inputs.
+   */
   class ControlInputHandler : public ApplicationModule {
    public:
     ControlInputHandler(
-        EntityOwner* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor);
+        ModuleGroup* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor);
 
-    //virtual ~ControlInputHandler() {}
-
-    virtual void prepare() override;
-    virtual void mainLoop() override;
+    void prepare() override;
+    void mainLoop() override;
 
    private:
-    virtual void createFunctionMap(std::shared_ptr<Motor> _motor);
-    virtual void appendCalibrationToMap();
-    funcmapT funcMap;
+    void createFunctionMap();
+    void appendCalibrationToMap();
+    /**
+     * A map between the TransferElementID of a PV and the associated
+     * function of the MotorDriverCard library. This allows to pass on
+     * the changed PV to the library by the ID returned from readAny().
+     */
+    std::map<TransferElementID, std::function<void(void)>> _funcMap{};
 
-    MotorControl control{this, "control", "Control words of the motor", HierarchyModifier::none, {"MOTOR"}};
-    PositionSetpoint positionSetpoint{
-        this, "positionSetpoint", "Position setpoints", HierarchyModifier::none, {"MOTOR"}};
-    UserLimits userLimits{this, "userLimits", "User-definable limits", HierarchyModifier::none, {"MOTOR"}};
-    SoftwareLimitCtrl swLimits{this, "swLimits", "Control data of SW limits", HierarchyModifier::none, {"MOTOR"}};
+    MotorControl control{this, "control", "Control words of the motor", {"MOTOR"}};
+    PositionSetpoint positionSetpoint{this, "positionSetpoint", "Position setpoints", {"MOTOR"}};
+    UserLimits userLimits{this, "userLimits", "User-definable limits", {"MOTOR"}};
+    SoftwareLimitCtrl swLimits{this, "swLimits", "Control data of SW limits", {"MOTOR"}};
     ReferenceSettings referenceSettings{
-        this, "referenceSettings", "Settings to define the position reference", HierarchyModifier::none, {"MOTOR"}};
-    Notification notification{this, "notification", "User notification", HierarchyModifier::none, {"MOTOR"}};
-    DummySignals dummySignals{
-        this, "dummySignals", " Signals triggering the dummy motor", HierarchyModifier::none, {"DUMMY"}};
-    //CalibrationCommands _calibrationCommands;
+        this, "referenceSettings", "Settings to define the position reference", {"MOTOR"}};
+    Notification notification{this, "notification", "User notification", {"MOTOR"}};
+    DummySignals dummySignals{this, "dummySignals", " Signals triggering the dummy motor", {"DUMMY"}};
+    // CalibrationCommands _calibrationCommands;
 
     // Callbacks for the BasiStepperMotor
     void enableCallback();
     void disableCallback();
     void startCallback();
 
-    //Callbacks for the LinearStepperMotor
+    // Callbacks for the LinearStepperMotor
     void calibrateCallback();
     void determineToleranceCallback();
 
-    ReadAnyGroup inputGroup;
+    // ReadAnyGroup _inputGroup{};
     std::shared_ptr<Motor> _motor;
 
-  };   /* class ControlInputHandler */
-}}     // namespace ChimeraTK::MotorDriver
-#endif /* INCLUDE_STEPPERMOTORCTRL_H_ */
+  }; /* class ControlInputHandler */
+} // namespace ChimeraTK::MotorDriver

@@ -1,28 +1,20 @@
-/**
- * StepperMotorReadback.h
- *
- *  Created on: Sep 17, 2018
- *      Author: ckampm
- *
- */
+// SPDX-FileCopyrightText: Deutsches Elektronen-Synchrotron DESY, MSK, ChimeraTK Project <chimeratk-support@desy.de>
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#pragma once
 
-#ifndef INCLUDE_STEPPERMOTORREADBACK_H_
-#define INCLUDE_STEPPERMOTORREADBACK_H_
+#include "ExecutionTimer.h"
+#include "Motor.h"
 
 #include <ChimeraTK/ApplicationCore/ApplicationCore.h>
-#include <ChimeraTK/ReadAnyGroup.h>
 #include <ChimeraTK/MotorDriverCard/StepperMotor.h>
-#include "ExecutionTimer.h"
-
-#include "Motor.h"
+#include <ChimeraTK/ReadAnyGroup.h>
 
 #include <functional>
 
-namespace ChimeraTK { namespace MotorDriver {
-
+namespace ChimeraTK::MotorDriver {
   /**
- *  Position data
- */
+   *  Position data
+   */
   struct Position : public VariableGroup {
     using VariableGroup::VariableGroup;
 
@@ -35,9 +27,11 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarOutput<int> targetValueInSteps{this, "targetValueInSteps", "", "Readback of target position"};
   };
 
+  /********************************************************************************************************************/
+
   /**
- * Limit data
- */
+   * Limit data
+   */
   struct Limit : public VariableGroup {
     using VariableGroup::VariableGroup;
 
@@ -45,9 +39,11 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarOutput<double> maxValue{this, "maxValue", "", "Maximum velocity of the motor"};
   };
 
+  /********************************************************************************************************************/
+
   /**
- * Motor status information
- */
+   * Motor status information
+   */
   struct MotorStatus : public VariableGroup {
     using VariableGroup::VariableGroup;
 
@@ -65,9 +61,12 @@ namespace ChimeraTK { namespace MotorDriver {
 
     ScalarOutput<unsigned int> encoderReadoutMode{this, "encoderReadoutMode", "", "Encoder readout mode."};
   };
+
+  /********************************************************************************************************************/
+
   /**
- * Data for SW-defined position limits
- */
+   * Data for SW-defined position limits
+   */
   struct SoftwareLimitStat : public VariableGroup {
     using VariableGroup::VariableGroup;
 
@@ -79,9 +78,11 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarOutput<int> minPositionInSteps{this, "minPositionInSteps", "steps", "Min. SW position limit"};
   };
 
+  /********************************************************************************************************************/
+
   /**
- * VariableGroup describing the status of a reference switch
- */
+   * VariableGroup describing the status of a reference switch
+   */
   struct ReferenceSwitch : public VariableGroup {
     using VariableGroup::VariableGroup;
 
@@ -91,17 +92,18 @@ namespace ChimeraTK { namespace MotorDriver {
     ScalarOutput<int> isActive{this, "isActive", "", "Status of negative end switch"};
   };
 
+  /********************************************************************************************************************/
+
   /**
- *  @class ReadbackHandler
- *  @brief Base application module for cyclically reading data from the motor driver card HW.
- */
+   *  @class ReadbackHandler
+   *  @brief Base application module for cyclically reading data from the motor driver card HW.
+   */
   class ReadbackHandler : public ApplicationModule {
    public:
-    ReadbackHandler(
-        std::shared_ptr<Motor> motor, EntityOwner* owner, const std::string& name, const std::string& description);
+    ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
+        const std::string& description, const std::string& triggerPath);
 
-    //ScalarPushInput<int> trigger{this, "trigger", "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
-    ScalarPushInput<uint64_t> trigger{this, "tick", "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
+    ScalarPushInput<uint64_t> trigger{};
 
     // Diagnostics
     ScalarOutput<float> actualCycleTime{
@@ -114,44 +116,42 @@ namespace ChimeraTK { namespace MotorDriver {
 
       ScalarOutput<std::string> message{this, "message", "", ""};
       ScalarOutput<int32_t> status{this, "status", "", ""};
-    } deviceError{this, "Device", "", HierarchyModifier::oneLevelUp, {"MOTOR"}};
+    } deviceError{this, "../Device", "", {"MOTOR"}};
 
     void mainLoop() override;
 
-    Position position{this, "position", "Position data", HierarchyModifier::none, {"MOTOR"}};
-    Limit speedLimit{this, "speedLimit", "Speed data", HierarchyModifier::none, {"MOTOR"}};
-    Limit currentLimit{this, "currentLimit", "Current data", HierarchyModifier::none, {"MOTOR"}};
-    MotorStatus status{this, "status", "Status data of the motor driver", HierarchyModifier::none, {"MOTOR"}};
-    SoftwareLimitStat swLimits{this, "swLimits", "Status data of SW limits", HierarchyModifier::none, {"MOTOR"}};
-    ReferenceSwitch positiveEndSwitch;
-    ReferenceSwitch negativeEndSwitch;
+    Position position{this, "position", "Position data", {"MOTOR"}};
+    Limit speedLimit{this, "speedLimit", "Speed data", {"MOTOR"}};
+    Limit currentLimit{this, "currentLimit", "Current data", {"MOTOR"}};
+    MotorStatus status{this, "status", "Status data of the motor driver", {"MOTOR"}};
+    SoftwareLimitStat swLimits{this, "swLimits", "Status data of SW limits", {"MOTOR"}};
+    ReferenceSwitch positiveEndSwitch{};
+    ReferenceSwitch negativeEndSwitch{};
 
    protected:
-    std::function<void(void)> readbackFunction;
+    std::function<void(void)> _readbackFunction;
 
    private:
     void readback();
     void readEndSwitchData();
     /**
-   * Some variables are only calculated at startup
-   * of the MotorDriverCard lib, so read them only once
-   */
+     * Some variables are only calculated at startup
+     * of the MotorDriverCard lib, so read them only once
+     */
     void readConstData();
 
     std::shared_ptr<Motor> _motor;
-    ExecutionTimer<> execTimer;
-    ExecutionTimer<> receiveTimer;
-    unsigned int spiErrorCounter{0};
+    ::detail::ExecutionTimer<> _execTimer{};
+    ::detail::ExecutionTimer<> _receiveTimer{};
+    unsigned int _spiErrorCounter{0};
 
     /// Hack to prevent throwing when the motor dummy is used
     const bool _motorIsDummy;
-    bool motorIsDummy();
+    [[nodiscard]] bool motorIsDummy() const;
 
     void tryMotorRenew();
     void tryReadingFromMotor();
     void setStatusFromException(const std::exception& e);
   };
 
-}} // namespace ChimeraTK::MotorDriver
-
-#endif /* INCLUDE_STEPPERMOTORREADBACK_H_ */
+} // namespace ChimeraTK::MotorDriver

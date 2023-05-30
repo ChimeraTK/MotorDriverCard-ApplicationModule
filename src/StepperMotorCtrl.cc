@@ -1,95 +1,93 @@
-/*
- * StepperMotorCtrl.cc
- *
- *  Created on: Sep 13, 2018
- *      Author: ckampm
- */
+// SPDX-FileCopyrightText: Deutsches Elektronen-Synchrotron DESY, MSK, ChimeraTK Project <chimeratk-support@desy.de>
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "StepperMotorCtrl.h"
-#include "mtca4u/MotorDriverCard/MotorDriverException.h"
 
-namespace ChimeraTK { namespace MotorDriver {
+#include <utility>
+
+namespace ChimeraTK::MotorDriver {
 
   ControlInputHandler::ControlInputHandler(
-      EntityOwner* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor)
-  : ApplicationModule(owner, name, description), funcMap(), inputGroup(), _motor(motor) {
+      ModuleGroup* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor)
+  : ApplicationModule(owner, name, description), _motor(std::move(motor)) {
     // If motor has HW reference switches,
     // calibration is supported
     if(_motor->get()->hasHWReferenceSwitches()) {
-      control.calibrationCtrl = CalibrationCommands{
-          &control, "calibrationControl", "Calibration commands", HierarchyModifier::hideThis, {"MOTOR"}};
+      control.calibrationCtrl = CalibrationCommands{&control, ".", "Calibration commands", {"MOTOR"}};
     }
   }
 
-  void ControlInputHandler::createFunctionMap(std::shared_ptr<Motor> motor) {
-    funcMap[control.enable.getId()] = [this] { enableCallback(); };
-    funcMap[control.disable.getId()] = [this] { disableCallback(); };
-    funcMap[control.start.getId()] = [this] { startCallback(); };
-    funcMap[control.stop.getId()] = [this, motor] {
+  /********************************************************************************************************************/
+
+  void ControlInputHandler::createFunctionMap() {
+    _funcMap[control.enable.getId()] = [this] { enableCallback(); };
+    _funcMap[control.disable.getId()] = [this] { disableCallback(); };
+    _funcMap[control.start.getId()] = [this] { startCallback(); };
+    _funcMap[control.stop.getId()] = [this] {
       if(control.stop) {
-        motor->get()->stop();
+        _motor->get()->stop();
       }
     };
-    funcMap[control.emergencyStop.getId()] = [this, motor] {
+    _funcMap[control.emergencyStop.getId()] = [this] {
       if(control.emergencyStop) {
-        motor->get()->emergencyStop();
+        _motor->get()->emergencyStop();
       }
     };
-    funcMap[control.resetError.getId()] = [this, motor] {
+    _funcMap[control.resetError.getId()] = [this] {
       if(control.resetError) {
-        motor->get()->resetError();
+        _motor->get()->resetError();
       }
     };
-    funcMap[control.enableAutostart.getId()] = [this, motor] { motor->get()->setAutostart(control.enableAutostart); };
-    funcMap[control.enableFullStepping.getId()] = [this, motor] {
-      motor->get()->enableFullStepping(control.enableFullStepping);
+    _funcMap[control.enableAutostart.getId()] = [this] { _motor->get()->setAutostart(control.enableAutostart); };
+    _funcMap[control.enableFullStepping.getId()] = [this] {
+      _motor->get()->enableFullStepping(control.enableFullStepping);
     };
 
-    funcMap[positionSetpoint.positionInSteps.getId()] = [this, motor] {
-      motor->get()->setTargetPositionInSteps(positionSetpoint.positionInSteps);
+    _funcMap[positionSetpoint.positionInSteps.getId()] = [this] {
+      _motor->get()->setTargetPositionInSteps(positionSetpoint.positionInSteps);
     };
-    funcMap[positionSetpoint.position.getId()] = [this, motor] {
-      motor->get()->setTargetPosition(positionSetpoint.position);
+    _funcMap[positionSetpoint.position.getId()] = [this] {
+      _motor->get()->setTargetPosition(positionSetpoint.position);
     };
-    funcMap[positionSetpoint.relativePositionInSteps.getId()] = [this, motor] {
-      motor->get()->moveRelativeInSteps(positionSetpoint.relativePositionInSteps);
+    _funcMap[positionSetpoint.relativePositionInSteps.getId()] = [this] {
+      _motor->get()->moveRelativeInSteps(positionSetpoint.relativePositionInSteps);
     };
-    funcMap[positionSetpoint.relativePosition.getId()] = [this, motor] {
-      motor->get()->moveRelative(positionSetpoint.relativePosition);
-    };
-
-    funcMap[referenceSettings.positionInSteps.getId()] = [this, motor] {
-      motor->get()->setActualPositionInSteps(referenceSettings.positionInSteps);
-    };
-    funcMap[referenceSettings.position.getId()] = [this, motor] {
-      motor->get()->setActualPosition(referenceSettings.position);
-    };
-    funcMap[referenceSettings.encoderPosition.getId()] = [this, motor] {
-      motor->get()->setActualEncoderPosition(referenceSettings.encoderPosition);
-    };
-    funcMap[referenceSettings.axisTranslationInSteps.getId()] = [this, motor] {
-      motor->get()->translateAxisInSteps(referenceSettings.axisTranslationInSteps);
-    };
-    funcMap[referenceSettings.axisTranslation.getId()] = [this, motor] {
-      motor->get()->translateAxis(referenceSettings.axisTranslation);
+    _funcMap[positionSetpoint.relativePosition.getId()] = [this] {
+      _motor->get()->moveRelative(positionSetpoint.relativePosition);
     };
 
-    funcMap[swLimits.enable.getId()] = [this, motor] { motor->get()->setSoftwareLimitsEnabled(swLimits.enable); };
-    funcMap[swLimits.maxPosition.getId()] = [this, motor] { motor->get()->setMaxPositionLimit(swLimits.maxPosition); };
-    funcMap[swLimits.minPosition.getId()] = [this, motor] { motor->get()->setMinPositionLimit(swLimits.minPosition); };
-    funcMap[swLimits.maxPositionInSteps.getId()] = [this, motor] {
-      motor->get()->setMaxPositionLimitInSteps(swLimits.maxPositionInSteps);
+    _funcMap[referenceSettings.positionInSteps.getId()] = [this] {
+      _motor->get()->setActualPositionInSteps(referenceSettings.positionInSteps);
     };
-    funcMap[swLimits.minPositionInSteps.getId()] = [this, motor] {
-      motor->get()->setMinPositionLimitInSteps(swLimits.minPositionInSteps);
+    _funcMap[referenceSettings.position.getId()] = [this] {
+      _motor->get()->setActualPosition(referenceSettings.position);
+    };
+    _funcMap[referenceSettings.encoderPosition.getId()] = [this] {
+      _motor->get()->setActualEncoderPosition(referenceSettings.encoderPosition);
+    };
+    _funcMap[referenceSettings.axisTranslationInSteps.getId()] = [this] {
+      _motor->get()->translateAxisInSteps(referenceSettings.axisTranslationInSteps);
+    };
+    _funcMap[referenceSettings.axisTranslation.getId()] = [this] {
+      _motor->get()->translateAxis(referenceSettings.axisTranslation);
     };
 
-    funcMap[userLimits.current.getId()] = [this, motor] { motor->get()->setUserCurrentLimit(userLimits.current); };
-    funcMap[userLimits.speed.getId()] = [this, motor] { motor->get()->setUserSpeedLimit(userLimits.speed); };
+    _funcMap[swLimits.enable.getId()] = [this] { _motor->get()->setSoftwareLimitsEnabled(swLimits.enable); };
+    _funcMap[swLimits.maxPosition.getId()] = [this] { _motor->get()->setMaxPositionLimit(swLimits.maxPosition); };
+    _funcMap[swLimits.minPosition.getId()] = [this] { _motor->get()->setMinPositionLimit(swLimits.minPosition); };
+    _funcMap[swLimits.maxPositionInSteps.getId()] = [this] {
+      _motor->get()->setMaxPositionLimitInSteps(swLimits.maxPositionInSteps);
+    };
+    _funcMap[swLimits.minPositionInSteps.getId()] = [this] {
+      _motor->get()->setMinPositionLimitInSteps(swLimits.minPositionInSteps);
+    };
+
+    _funcMap[userLimits.current.getId()] = [this] { _motor->get()->setUserCurrentLimit(userLimits.current); };
+    _funcMap[userLimits.speed.getId()] = [this] { _motor->get()->setUserSpeedLimit(userLimits.speed); };
   }
 
   void ControlInputHandler::prepare() {
-    createFunctionMap(_motor);
+    createFunctionMap();
 
     if(_motor->get()->hasHWReferenceSwitches()) {
       appendCalibrationToMap();
@@ -98,8 +96,10 @@ namespace ChimeraTK { namespace MotorDriver {
     writeAll();
   }
 
+  /********************************************************************************************************************/
+
   void ControlInputHandler::mainLoop() {
-    inputGroup = this->readAnyGroup();
+    auto inputGroup = this->readAnyGroup();
 
     // Write once to propagate inital values
     writeAll();
@@ -115,14 +115,16 @@ namespace ChimeraTK { namespace MotorDriver {
         continue;
       }
 
-      //FIXME Keep this only as long as we rely on the dummy for tests
+      // FIXME Keep this only as long as we rely on the dummy for tests
       try {
-        funcMap.at(changedVarId)();
+        _funcMap.at(changedVarId)();
       }
-      catch(mtca4u::MotorDriverException& e) {
+      catch(ChimeraTK::logic_error& e) {
         notification.message = "Exception: " + std::string(e.what());
       }
 
+      // We could either use string::compare or cast the notification.message to string.
+      // NOLINTNEXTLINE(readability-string-compare)
       if(std::string("").compare(notification.message)) {
         notification.hasMessage = 1;
       }
@@ -134,17 +136,23 @@ namespace ChimeraTK { namespace MotorDriver {
     }
   }
 
+  /********************************************************************************************************************/
+
   void ControlInputHandler::enableCallback() {
     if(control.enable) {
       _motor->get()->setEnabled(true);
     }
   }
 
+  /********************************************************************************************************************/
+
   void ControlInputHandler::disableCallback() {
     if(control.disable) {
       _motor->get()->setEnabled(false);
     }
   }
+
+  /********************************************************************************************************************/
 
   void ControlInputHandler::startCallback() {
     if(control.start) {
@@ -157,10 +165,14 @@ namespace ChimeraTK { namespace MotorDriver {
     }
   }
 
+  /********************************************************************************************************************/
+
   void ControlInputHandler::appendCalibrationToMap() {
-    funcMap[control.calibrationCtrl.calibrateMotor.getId()] = [this] { calibrateCallback(); };
-    funcMap[control.calibrationCtrl.determineTolerance.getId()] = [this] { determineToleranceCallback(); };
+    _funcMap[control.calibrationCtrl.calibrateMotor.getId()] = [this] { calibrateCallback(); };
+    _funcMap[control.calibrationCtrl.determineTolerance.getId()] = [this] { determineToleranceCallback(); };
   }
+
+  /********************************************************************************************************************/
 
   void ControlInputHandler::calibrateCallback() {
     if(control.calibrationCtrl.calibrateMotor) {
@@ -173,6 +185,8 @@ namespace ChimeraTK { namespace MotorDriver {
     }
   }
 
+  /********************************************************************************************************************/
+
   void ControlInputHandler::determineToleranceCallback() {
     if(control.calibrationCtrl.determineTolerance) {
       if(_motor->get()->isSystemIdle()) {
@@ -183,4 +197,4 @@ namespace ChimeraTK { namespace MotorDriver {
       }
     }
   }
-}} // namespace ChimeraTK::MotorDriver
+} // namespace ChimeraTK::MotorDriver
