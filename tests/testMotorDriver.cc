@@ -71,7 +71,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
-  auto trigger = testFacility.getScalar<uint64_t>("/Motor/readback/tick");
+  auto trigger = testFacility.getVoid("/Motor/readback/tick");
   auto motorState = testFacility.getScalar<std::string>("/Motor/readback/status/state");
 
   // Enable he dummy motor
@@ -143,7 +143,7 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
   ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
-  auto trigger = testFacility.getScalar<uint64_t>("Motor/readback/tick");
+  auto trigger = testFacility.getVoid("Motor/readback/tick");
   auto motorState = testFacility.getScalar<std::string>("Motor/readback/status/state");
 
   trigger.write();
