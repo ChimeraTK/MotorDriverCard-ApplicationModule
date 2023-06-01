@@ -43,7 +43,8 @@ namespace ChimeraTK::MotorDriver {
       positiveEndSwitch = ReferenceSwitch{this, "positiveEndSwitch", "Data of the positive end switch", {"MOTOR"}};
       negativeEndSwitch = ReferenceSwitch{this, "negativeEndSwitch", "Data of the negative end switch", {"MOTOR"}};
     }
-    trigger = ScalarPushInput<uint64_t>{this, triggerPath, "", "Trigger to initiate reading from HW", {"MOT_TRIG"}};
+    trigger = VoidInput{
+        this, triggerPath, "Trigger to initiate reading from HW", std::unordered_set<std::string>{"MOT_TRIG"}};
   }
 
   /********************************************************************************************************************/

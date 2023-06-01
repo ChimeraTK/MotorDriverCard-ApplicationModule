@@ -103,7 +103,7 @@ namespace ChimeraTK::MotorDriver {
     ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
         const std::string& description, const std::string& triggerPath);
 
-    ScalarPushInput<uint64_t> trigger{};
+    VoidInput trigger{};
 
     // Diagnostics
     ScalarOutput<float> actualCycleTime{
