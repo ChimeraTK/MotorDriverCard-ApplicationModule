@@ -86,6 +86,7 @@ namespace ChimeraTK::MotorDriver {
   struct ReferenceSwitch : public VariableGroup {
     using VariableGroup::VariableGroup;
 
+    ScalarOutput<Boolean> available{this, "isAvailable", "flag", "Flag whether this end switch is available"};
     ScalarOutput<int> positionInSteps{this, "positionInSteps", "steps", "Position of the positive reference switch"};
     ScalarOutput<float> position{this, "position", "", "Position of the positive reference switch"};
     ScalarOutput<float> tolerance{this, "tolerance", "", "Tolerance of the calibrated positive end switch position."};
@@ -101,9 +102,11 @@ namespace ChimeraTK::MotorDriver {
   class ReadbackHandler : public ApplicationModule {
    public:
     ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
-        const std::string& description, const std::string& triggerPath);
+        const std::string& description, const std::string& triggerPath, DeviceModule* deviceModule);
 
     VoidInput trigger{};
+    VoidInput deviceBecameFunctional{};
+    ScalarPollInput<int32_t> deviceStatus{};
 
     // Diagnostics
     ScalarOutput<float> actualCycleTime{
@@ -118,6 +121,13 @@ namespace ChimeraTK::MotorDriver {
       ScalarOutput<int32_t> status{this, "status", "", ""};
     } deviceError{this, "../Device", "", {"MOTOR"}};
 
+    void initMotorDevice();
+
+    void prepare() override {
+      incrementDataFaultCounter();
+      writeAll();
+      decrementDataFaultCounter();
+    }
     void mainLoop() override;
 
     Position position{this, "position", "Position data", {"MOTOR"}};
@@ -125,8 +135,8 @@ namespace ChimeraTK::MotorDriver {
     Limit currentLimit{this, "currentLimit", "Current data", {"MOTOR"}};
     MotorStatus status{this, "status", "Status data of the motor driver", {"MOTOR"}};
     SoftwareLimitStat swLimits{this, "swLimits", "Status data of SW limits", {"MOTOR"}};
-    ReferenceSwitch positiveEndSwitch{};
-    ReferenceSwitch negativeEndSwitch{};
+    ReferenceSwitch positiveEndSwitch{this, "positiveEndSwitch", "Data of the positive end switch", {"MOTOR"}};
+    ReferenceSwitch negativeEndSwitch{this, "negativeEndSwitch", "Data of the negative end switch", {"MOTOR"}};
 
    protected:
     std::function<void(void)> _readbackFunction;
@@ -146,12 +156,17 @@ namespace ChimeraTK::MotorDriver {
     unsigned int _spiErrorCounter{0};
 
     /// Hack to prevent throwing when the motor dummy is used
-    const bool _motorIsDummy;
-    [[nodiscard]] bool motorIsDummy() const;
+    bool _motorIsDummy;
+    [[nodiscard]] bool motorIsDummy();
 
     void tryMotorRenew();
     void tryReadingFromMotor();
     void setStatusFromException(const std::exception& e);
+
+    enum class State { DEFUNCT, SETUP, RUNNING };
+
+    State _currentModuleState{State::DEFUNCT};
+    DeviceModule* _deviceModule{nullptr};
   };
 
 } // namespace ChimeraTK::MotorDriver

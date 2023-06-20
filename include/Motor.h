@@ -8,7 +8,7 @@
 namespace ChimeraTK::MotorDriver {
   class Motor {
    public:
-    explicit Motor(StepperMotorParameters parameters) : _parameters(std::move(parameters)) { renew(); }
+    explicit Motor(StepperMotorParameters parameters) : _parameters(std::move(parameters)) {}
 
     void renew() {
       // Drop our reference to the StepperMotor. This should free the motor and the factory should give us a new one
@@ -29,6 +29,8 @@ namespace ChimeraTK::MotorDriver {
     [[nodiscard]] std::string toString() const {
       return _parameters.deviceName + ":" + _parameters.moduleName + ":" + std::to_string(_parameters.driverId);
     }
+
+    [[nodiscard]] const StepperMotorParameters& getMotorParameters() const { return _parameters; }
 
    private:
     std::shared_ptr<StepperMotor> _motor;
