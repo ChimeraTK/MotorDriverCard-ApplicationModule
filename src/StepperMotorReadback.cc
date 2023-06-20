@@ -10,45 +10,62 @@
 
 namespace ChimeraTK::MotorDriver {
 
-  void ReadbackHandler::mainLoop() {
+  /********************************************************************************************************************/
+
+  void ReadbackHandler::prepare() {
     // The module starts with the fake device state in FAIL mode since we
     // did not open the motor yet and know nothing about it
-    deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
-    deviceError.message = "Initial bringup of device";
-    deviceError.setCurrentVersionNumber({});
+    moduleError.status = StatusOutput::Status::FAULT;
+    moduleError.message = "Initial bringup of device";
+    moduleError.setCurrentVersionNumber({});
     incrementDataFaultCounter();
+    moduleError.status.setDataValidity(DataValidity::ok);
+    moduleError.message.setDataValidity(DataValidity::ok);
+    writeAll();
+    decrementDataFaultCounter();
+  }
 
+  /********************************************************************************************************************/
+
+  void ReadbackHandler::mainLoop() {
     auto group = ReadAnyGroup({trigger, deviceBecameFunctional});
 
-    // Report an exception once on startup. If the device is already working, we get an
-    // Initial toggle of deviceBecameFunctional that way, otherwise we will sit in the wait for
-    // deviceBecameFunctional until the first error happens.
+    // Report an exception once on startup. If the device is already working, we get an initial toggle of
+    // deviceBecameFunctional that way, otherwise we would sit in the wait for deviceBecameFunctional until the first
+    // error happens.
     _deviceModule->reportException("Bootstrap module startup");
 
     while(true) {
-      writeAll();
-      switch(_currentModuleState) {
-        case State::DEFUNCT:
+      switch(static_cast<StatusOutput::Status>(moduleError.status)) {
+        case StatusOutput::Status::FAULT:
           group.readUntil(deviceBecameFunctional.getId());
 
           tryMotorRenew();
           tryReadingFromMotor();
-          if(_motor->isOpen()) {
-            _currentModuleState = State::RUNNING;
-          }
           break;
-        case ReadbackHandler::State::RUNNING: {
+        case StatusOutput::Status::OK: {
           group.readUntil(trigger.getId());
           tryReadingFromMotor();
-
-          if(!_motor->isOpen()) {
-            _currentModuleState = State::DEFUNCT;
-          }
           break;
         }
         default:
           assert(false);
           break;
+      }
+
+      // If we are (still) in FAULT mode after this round of either readout or trying to open the motor
+      // flag everything as invalid and shove it out the door
+      if(moduleError.status == StatusOutput::Status::FAULT) {
+        incrementDataFaultCounter();
+      }
+
+      // Flag the status and message outputs of the module errors as valid
+      moduleError.status.setDataValidity(DataValidity::ok);
+      moduleError.message.setDataValidity(DataValidity::ok);
+      writeAll();
+
+      if(moduleError.status == StatusOutput::Status::FAULT) {
+        decrementDataFaultCounter();
       }
     }
   }
@@ -174,18 +191,15 @@ namespace ChimeraTK::MotorDriver {
 
   void ReadbackHandler::tryMotorRenew() {
     try {
-      decrementDataFaultCounter();
       std::ignore = motorIsDummy();
       readConstData();
-      deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
-      deviceError.message = "";
-      deviceError.setCurrentVersionNumber({});
-      deviceError.writeAll();
+      moduleError.status = StatusOutput::Status::OK;
+      moduleError.message = "";
+      moduleError.setCurrentVersionNumber({});
       _spiErrorCounter = 0;
     }
     catch(ChimeraTK::runtime_error& e) {
-      std::cerr << e.what() << std::endl;
-      if(std::string(deviceError.message) != e.what()) {
+      if(std::string(moduleError.message) != e.what()) {
         setStatusFromException(e);
       }
       _deviceModule->reportException(e.what());
@@ -227,7 +241,6 @@ namespace ChimeraTK::MotorDriver {
     }
     catch(ChimeraTK::runtime_error& e) {
       if(_spiErrorCounter > SPI_RETRY_COUNT) {
-        incrementDataFaultCounter();
         _motor->close();
         setStatusFromException(e);
         _deviceModule->reportException(e.what());
@@ -244,9 +257,8 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ReadbackHandler::setStatusFromException(const std::exception& e) {
-    deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
-    deviceError.message = e.what();
-    deviceError.setCurrentVersionNumber({});
-    deviceError.writeAll();
+    moduleError.status = StatusOutput::Status::FAULT;
+    moduleError.message = e.what();
+    moduleError.setCurrentVersionNumber({});
   }
 } // namespace ChimeraTK::MotorDriver

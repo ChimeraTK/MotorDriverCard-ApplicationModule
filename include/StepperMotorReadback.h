@@ -6,6 +6,7 @@
 #include "Motor.h"
 
 #include <ChimeraTK/ApplicationCore/ApplicationCore.h>
+#include <ChimeraTK/ApplicationCore/StatusAccessor.h>
 #include <ChimeraTK/MotorDriverCard/StepperMotor.h>
 #include <ChimeraTK/ReadAnyGroup.h>
 
@@ -118,16 +119,12 @@ namespace ChimeraTK::MotorDriver {
       using VariableGroup::VariableGroup;
 
       ScalarOutput<std::string> message{this, "message", "", ""};
-      ScalarOutput<int32_t> status{this, "status", "", ""};
-    } deviceError{this, "../Device", "", {"MOTOR"}};
+      StatusOutput status{this, "status", ""};
+    } moduleError{this, "ModuleStatus", "", {"MOTOR"}};
 
     void initMotorDevice();
 
-    void prepare() override {
-      incrementDataFaultCounter();
-      writeAll();
-      decrementDataFaultCounter();
-    }
+    void prepare() override;
     void mainLoop() override;
 
     Position position{this, "position", "Position data", {"MOTOR"}};
@@ -163,9 +160,6 @@ namespace ChimeraTK::MotorDriver {
     void tryReadingFromMotor();
     void setStatusFromException(const std::exception& e);
 
-    enum class State { DEFUNCT, SETUP, RUNNING };
-
-    State _currentModuleState{State::DEFUNCT};
     DeviceModule* _deviceModule{nullptr};
   };
 
