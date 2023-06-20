@@ -74,10 +74,17 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   auto trigger = testFacility.getVoid("/Motor/readback/tick");
   auto motorState = testFacility.getScalar<std::string>("/Motor/readback/status/state");
 
-  // Enable he dummy motor
+  // Enable the dummy motor
   // FIXME: If the dummy is enabled here or not does not make a difference. The test still passes. Check the test code.
   _motorControlerDummy->setEnabled(true);
   _motorControlerDummy->setMotorCurrentEnabled(true);
+
+  BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::faulty);
+
+  // Trigger readout loop once, so the motor device "wakes up" and actually initializes itself
+  testServer.motor->motorProxyDevice.reportException("Exception trigger from test to toggle deviceBecameFunctional");
+  testFacility.stepApplication();
+  motorState.read();
 
   // Application should start with disabled motor (initial value being send)
   // Directly check. Initial values are already received.
@@ -145,6 +152,13 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
 
   auto trigger = testFacility.getVoid("Motor/readback/tick");
   auto motorState = testFacility.getScalar<std::string>("Motor/readback/status/state");
+
+  BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::faulty);
+
+  // Trigger readout loop once, so the motor device "wakes up" and actually initializes itself
+  testServer.motor->motorProxyDevice.reportException("Exception trigger from test to toggle deviceBecameFunctional");
+  testFacility.stepApplication();
+  motorState.read();
 
   trigger.write();
   testFacility.stepApplication();

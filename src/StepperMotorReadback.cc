@@ -3,32 +3,69 @@
 
 #include "StepperMotorReadback.h"
 
+#include <ChimeraTK/ApplicationCore/DeviceManager.h>
+
+#include <cstdint>
 #include <utility>
 
 namespace ChimeraTK::MotorDriver {
 
-  void ReadbackHandler::mainLoop() {
-    readConstData();
+  /********************************************************************************************************************/
 
-    deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
-    deviceError.message = "";
-    deviceError.setCurrentVersionNumber({});
-    deviceError.writeAll();
+  void ReadbackHandler::prepare() {
+    // The module starts with the fake device state in FAIL mode since we
+    // did not open the motor yet and know nothing about it
+    moduleError.status = StatusOutput::Status::FAULT;
+    moduleError.message = "Initial bringup of device";
+    moduleError.setCurrentVersionNumber({});
+    incrementDataFaultCounter();
+    moduleError.status.setDataValidity(DataValidity::ok);
+    moduleError.message.setDataValidity(DataValidity::ok);
+    writeAll();
+    decrementDataFaultCounter();
+  }
+
+  /********************************************************************************************************************/
+
+  void ReadbackHandler::mainLoop() {
+    auto group = ReadAnyGroup({trigger, deviceBecameFunctional});
+
+    // Report an exception once on startup. If the device is already working, we get an initial toggle of
+    // deviceBecameFunctional that way, otherwise we would sit in the wait for deviceBecameFunctional until the first
+    // error happens.
+    _deviceModule->reportException("Bootstrap module startup");
 
     while(true) {
-      if(_motor->isOpen()) {
-        // First calculate the initial values
-        tryReadingFromMotor();
+      switch(static_cast<StatusOutput::Status>(moduleError.status)) {
+        case StatusOutput::Status::FAULT:
+          group.readUntil(deviceBecameFunctional.getId());
+
+          tryMotorRenew();
+          tryReadingFromMotor();
+          break;
+        case StatusOutput::Status::OK: {
+          group.readUntil(trigger.getId());
+          tryReadingFromMotor();
+          break;
+        }
+        default:
+          assert(false);
+          break;
       }
 
-      // We now have all data. Write them, whether or not the read failed. this will set the validity properly.
+      // If we are (still) in FAULT mode after this round of either readout or trying to open the motor
+      // flag everything as invalid and shove it out the door
+      if(moduleError.status == StatusOutput::Status::FAULT) {
+        incrementDataFaultCounter();
+      }
+
+      // Flag the status and message outputs of the module errors as valid
+      moduleError.status.setDataValidity(DataValidity::ok);
+      moduleError.message.setDataValidity(DataValidity::ok);
       writeAll();
 
-      // Wait for cyclic trigger
-      trigger.read();
-
-      if(not _motor->isOpen()) {
-        tryMotorRenew();
+      if(moduleError.status == StatusOutput::Status::FAULT) {
+        decrementDataFaultCounter();
       }
     }
   }
@@ -36,21 +73,20 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   ReadbackHandler::ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
-      const std::string& description, const std::string& triggerPath)
-  : ApplicationModule::ApplicationModule(owner, name, description), _motor{std::move(motor)}, _motorIsDummy{
-                                                                                                  motorIsDummy()} {
-    if(_motor->get()->hasHWReferenceSwitches()) {
-      positiveEndSwitch = ReferenceSwitch{this, "positiveEndSwitch", "Data of the positive end switch", {"MOTOR"}};
-      negativeEndSwitch = ReferenceSwitch{this, "negativeEndSwitch", "Data of the negative end switch", {"MOTOR"}};
-    }
-    trigger = VoidInput{
-        this, triggerPath, "Trigger to initiate reading from HW", std::unordered_set<std::string>{"MOT_TRIG"}};
+      const std::string& description, const std::string& triggerPath, DeviceModule* deviceModule)
+  : ApplicationModule::ApplicationModule(owner, name, description), trigger{this, triggerPath,
+                                                                        "Trigger to initiate read-out from HW",
+                                                                        std::unordered_set<std::string>{"MOT_TRIG"}},
+    _motor{std::move(motor)}, _motorIsDummy{false}, _deviceModule{deviceModule} {
+    deviceBecameFunctional =
+        VoidInput(this, deviceModule->getDeviceManager().deviceBecameFunctional.getModel().getFullyQualifiedPath(), "");
+    deviceStatus = ScalarPollInput<int32_t>(this, deviceModule->getModel().getFullyQualifiedPath() + "/status", "", "");
   }
 
   /********************************************************************************************************************/
 
   void ReadbackHandler::readConstData() {
-    if(!_motorIsDummy) {
+    if(_motor && !_motorIsDummy) {
       currentLimit.maxValue = _motor->get()->getSafeCurrentLimit();
       speedLimit.maxValue = _motor->get()->getMaxSpeedCapability();
     }
@@ -98,49 +134,75 @@ namespace ChimeraTK::MotorDriver {
 
   /// Reading data specific for motor with end switches
   void ReadbackHandler::readEndSwitchData() {
-    negativeEndSwitch.isActive = _motor->get()->isNegativeReferenceActive();
-    positiveEndSwitch.isActive = _motor->get()->isPositiveReferenceActive();
+    if(_motor->get()->hasHWReferenceSwitches()) {
+      negativeEndSwitch.available = true;
+      positiveEndSwitch.available = true;
 
-    positiveEndSwitch.positionInSteps = _motor->get()->getPositiveEndReferenceInSteps();
-    negativeEndSwitch.positionInSteps = _motor->get()->getNegativeEndReferenceInSteps();
-    positiveEndSwitch.position = _motor->get()->recalculateStepsInUnits(positiveEndSwitch.positionInSteps);
-    negativeEndSwitch.position = _motor->get()->recalculateStepsInUnits(negativeEndSwitch.positionInSteps);
+      negativeEndSwitch.isActive = _motor->get()->isNegativeReferenceActive();
+      positiveEndSwitch.isActive = _motor->get()->isPositiveReferenceActive();
 
-    positiveEndSwitch.tolerance = _motor->get()->getTolerancePositiveEndSwitch();
-    negativeEndSwitch.tolerance = _motor->get()->getToleranceNegativeEndSwitch();
+      positiveEndSwitch.positionInSteps = _motor->get()->getPositiveEndReferenceInSteps();
+      negativeEndSwitch.positionInSteps = _motor->get()->getNegativeEndReferenceInSteps();
+      positiveEndSwitch.position = _motor->get()->recalculateStepsInUnits(positiveEndSwitch.positionInSteps);
+      negativeEndSwitch.position = _motor->get()->recalculateStepsInUnits(negativeEndSwitch.positionInSteps);
+
+      positiveEndSwitch.tolerance = _motor->get()->getTolerancePositiveEndSwitch();
+      negativeEndSwitch.tolerance = _motor->get()->getToleranceNegativeEndSwitch();
+    }
+    else {
+      positiveEndSwitch.available = false;
+      negativeEndSwitch.available = false;
+
+      positiveEndSwitch.isActive = 0;
+      negativeEndSwitch.isActive = 0;
+      positiveEndSwitch.isActive.setDataValidity(DataValidity::faulty);
+      negativeEndSwitch.isActive.setDataValidity(DataValidity::faulty);
+
+      positiveEndSwitch.positionInSteps.setDataValidity(DataValidity::faulty);
+      negativeEndSwitch.positionInSteps.setDataValidity(DataValidity::faulty);
+
+      positiveEndSwitch.position.setDataValidity(DataValidity::faulty);
+      negativeEndSwitch.position.setDataValidity(DataValidity::faulty);
+
+      positiveEndSwitch.tolerance = 0.F;
+      negativeEndSwitch.tolerance = 0.F;
+      positiveEndSwitch.tolerance.setDataValidity(DataValidity::faulty);
+      negativeEndSwitch.tolerance.setDataValidity(DataValidity::faulty);
+    }
   }
 
   /********************************************************************************************************************/
 
-  bool ReadbackHandler::motorIsDummy() const {
-    bool isDummy = false;
+  bool ReadbackHandler::motorIsDummy() {
+    if(!_motor) return _motorIsDummy;
+
     try {
       // Throws if dummy is used
       _motor->get()->getSafeCurrentLimit();
     }
     catch(ChimeraTK::logic_error&) {
-      isDummy = true;
+      _motorIsDummy = true;
     }
-    return isDummy;
+
+    return _motorIsDummy;
   }
 
   /********************************************************************************************************************/
 
   void ReadbackHandler::tryMotorRenew() {
     try {
-      _motor->renew();
-      std::cerr << "device recovered: " << _motor->toString() << std::endl;
-      decrementDataFaultCounter();
-      deviceError.status = static_cast<int32_t>(StatusOutput::Status::OK);
-      deviceError.message = "";
-      deviceError.setCurrentVersionNumber({});
-      deviceError.writeAll();
+      std::ignore = motorIsDummy();
+      readConstData();
+      moduleError.status = StatusOutput::Status::OK;
+      moduleError.message = "";
+      moduleError.setCurrentVersionNumber({});
       _spiErrorCounter = 0;
     }
     catch(ChimeraTK::runtime_error& e) {
-      if(std::string(deviceError.message) != e.what()) {
+      if(std::string(moduleError.message) != e.what()) {
         setStatusFromException(e);
       }
+      _deviceModule->reportException(e.what());
     }
   }
 
@@ -148,6 +210,12 @@ namespace ChimeraTK::MotorDriver {
 
   void ReadbackHandler::tryReadingFromMotor() {
     constexpr unsigned int SPI_RETRY_COUNT{5};
+
+    // Don't event try reading if there is no motor
+    if(!_motor->isOpen()) {
+      return;
+    }
+
     try {
       // FIXME This is only to evaluate the timer
       if(!_execTimer.isInitialized()) {
@@ -162,9 +230,7 @@ namespace ChimeraTK::MotorDriver {
       _receiveTimer.initializeMeasurement();
 
       readback();
-      if(_motor->get()->hasHWReferenceSwitches()) {
-        readEndSwitchData();
-      }
+      readEndSwitchData();
 
       _receiveTimer.measureOnce();
       auto rt = std::chrono::duration_cast<std::chrono::microseconds>(_receiveTimer.getMeasurementResult());
@@ -175,10 +241,12 @@ namespace ChimeraTK::MotorDriver {
     }
     catch(ChimeraTK::runtime_error& e) {
       if(_spiErrorCounter > SPI_RETRY_COUNT) {
-        std::cerr << "motor device failed: " << _motor->toString() << std::endl;
-        incrementDataFaultCounter();
         _motor->close();
         setStatusFromException(e);
+        _deviceModule->reportException(e.what());
+
+        // Reset counter so that there is a longer period in trying to read after re-open
+        _spiErrorCounter = 0;
       }
       else {
         _spiErrorCounter++;
@@ -189,9 +257,8 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ReadbackHandler::setStatusFromException(const std::exception& e) {
-    deviceError.status = static_cast<int32_t>(StatusOutput::Status::FAULT);
-    deviceError.message = e.what();
-    deviceError.setCurrentVersionNumber({});
-    deviceError.writeAll();
+    moduleError.status = StatusOutput::Status::FAULT;
+    moduleError.message = e.what();
+    moduleError.setCurrentVersionNumber({});
   }
 } // namespace ChimeraTK::MotorDriver

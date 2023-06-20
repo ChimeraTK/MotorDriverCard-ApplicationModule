@@ -27,4 +27,5 @@ endforeach( testExecutableSrcFile )
 FILE(COPY MD22_on_DAMC2.dmap
           DFMC_MD22_test.map
           VT21-MotorDriverCardConfig.xml
+          motorProxy.xlmap
      DESTINATION ${PROJECT_BINARY_DIR})

@@ -12,7 +12,7 @@ namespace ChimeraTK::MotorDriver {
   : ApplicationModule(owner, name, description), _motor(std::move(motor)) {
     // If motor has HW reference switches,
     // calibration is supported
-    if(_motor->get()->hasHWReferenceSwitches()) {
+    if(_motor->getMotorParameters().motorType == StepperMotorType::LINEAR) {
       control.calibrationCtrl = CalibrationCommands{&control, ".", "Calibration commands", {"MOTOR"}};
     }
   }
@@ -89,7 +89,7 @@ namespace ChimeraTK::MotorDriver {
   void ControlInputHandler::prepare() {
     createFunctionMap();
 
-    if(_motor->get()->hasHWReferenceSwitches()) {
+    if(_motor->getMotorParameters().motorType == StepperMotorType::LINEAR) {
       appendCalibrationToMap();
     }
 
@@ -175,6 +175,10 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ControlInputHandler::calibrateCallback() {
+    if(!_motor->get()->hasHWReferenceSwitches()) {
+      return;
+    }
+
     if(control.calibrationCtrl.calibrateMotor) {
       if(_motor->get()->isSystemIdle()) {
         _motor->get()->calibrate();
@@ -188,6 +192,10 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ControlInputHandler::determineToleranceCallback() {
+    if(!_motor->get()->hasHWReferenceSwitches()) {
+      return;
+    }
+
     if(control.calibrationCtrl.determineTolerance) {
       if(_motor->get()->isSystemIdle()) {
         _motor->get()->determineTolerance();

@@ -1,1 +1,2 @@
-STEPPER-MOTOR-DUMMY /dummy/MotorDriverCard DFMC_MD22_test.map
+STEPPER-MOTOR-DUMMY (dummy?map=DFMC_MD22_test.map)
+MotorProxy (logicalNameMap?map=motorProxy.xlmap&target=STEPPER-MOTOR-DUMMY)
