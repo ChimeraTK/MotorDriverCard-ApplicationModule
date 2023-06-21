@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<logicalNameMap>
+    <redirectedRegister name="Dummy">
+        <targetDevice><par>target</par></targetDevice>
+        <targetRegister><par>monitorRegister</par></targetRegister>
+        <plugin name="forceReadOnly" />
+    </redirectedRegister>
+</logicalNameMap>
