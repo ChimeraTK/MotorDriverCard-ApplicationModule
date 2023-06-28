@@ -134,8 +134,8 @@ namespace ChimeraTK::MotorDriver {
    */
   class ControlInputHandler : public ApplicationModule {
    public:
-    ControlInputHandler(
-        ModuleGroup* owner, const std::string& name, const std::string& description, std::shared_ptr<Motor> motor);
+    ControlInputHandler(ModuleGroup* owner, const std::string& name, const std::string& description,
+        std::shared_ptr<Motor> motor, DeviceModule* deviceModule);
 
     void prepare() override;
     void mainLoop() override;
@@ -143,12 +143,17 @@ namespace ChimeraTK::MotorDriver {
    private:
     void createFunctionMap();
     void appendCalibrationToMap();
+    void writeRecoveryValues();
     /**
      * A map between the TransferElementID of a PV and the associated
      * function of the MotorDriverCard library. This allows to pass on
      * the changed PV to the library by the ID returned from readAny().
      */
-    std::map<TransferElementID, std::function<void(void)>> _funcMap{};
+    using FunctionMapEntry = std::tuple<bool, std::string, std::function<void(void)>>;
+    std::map<TransferElementID, FunctionMapEntry> _funcMap{};
+    void addMapping(TransferElementAbstractor& element, bool writeOnRecovery, std::function<void(void)> func);
+
+    VoidInput deviceBecameFunctional;
 
     MotorControl control{this, "control", "Control words of the motor", {"MOTOR"}};
     PositionSetpoint positionSetpoint{this, "positionSetpoint", "Position setpoints", {"MOTOR"}};
