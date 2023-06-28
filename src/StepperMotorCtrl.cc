@@ -106,21 +106,22 @@ namespace ChimeraTK::MotorDriver {
 
     while(true) {
       notification.message = "";
-      notification.hasMessage = 0;
+      notification.hasMessage = false;
 
       auto changedVarId = inputGroup.readAny();
 
       if(not _motor->isOpen()) {
-        std::cerr << "Motor device is in recovery, not doing control step" << std::endl;
-        continue;
-      }
+        notification.hasMessage = true;
+        notification.message = "Motor device is in recovery, not doing control step";
+      } else {
 
-      // FIXME Keep this only as long as we rely on the dummy for tests
-      try {
-        _funcMap.at(changedVarId)();
-      }
-      catch(ChimeraTK::logic_error& e) {
-        notification.message = "Exception: " + std::string(e.what());
+        // FIXME Keep this only as long as we rely on the dummy for tests
+        try {
+          _funcMap.at(changedVarId)();
+        }
+        catch(ChimeraTK::logic_error& e) {
+          notification.message = "Exception: " + std::string(e.what());
+        }
       }
 
       // We could either use string::compare or cast the notification.message to string.

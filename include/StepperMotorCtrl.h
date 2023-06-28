@@ -99,7 +99,8 @@ namespace ChimeraTK::MotorDriver {
   struct Notification : public VariableGroup {
     using VariableGroup::VariableGroup;
 
-    ScalarOutput<int> hasMessage{this, "hasMessage", "", "Warning flag, true when an invalid input has been issued."};
+    ScalarOutput<ChimeraTK::Boolean> hasMessage{
+        this, "hasMessage", "", "Warning flag, true when an invalid input has been issued."};
     ScalarOutput<std::string> message{this, "message", "", "Message for user notification from ControlInput module"};
   };
 
