@@ -9,11 +9,13 @@ namespace ChimeraTK::MotorDriver {
       const StepperMotorParameters& motorParameters, const std::string& triggerPath, const std::string& initScriptPath,
       const std::unordered_set<std::string>& tags)
   : ModuleGroup(owner, name, description, tags), motor{std::make_shared<Motor>(motorParameters)},
+    // Driver ID is only used to to get two different devices
     motorProxyDevice{this,
         "(logicalNameMap?map=motorProxy.xlmap&target=" + motor->getMotorParameters().deviceName +
-            "&monitorRegister=" + motor->getMotorParameters().moduleName + "/WORD_PROJ_VERSION)",
+            "&monitorRegister=" + motor->getMotorParameters().moduleName + "/WORD_PROJ_VERSION" +
+            "&driverId=" + std::to_string(motor->getMotorParameters().driverId) + ")",
         triggerPath},
-    ctrlInputHandler{this, "controlInput", "Handles the control input to the motor driver.", motor},
+    ctrlInputHandler{this, "controlInput", "Handles the control input to the motor driver.", motor, &motorProxyDevice},
     readbackHandler{motor, this, "readback", "Signals read from the motor driver", triggerPath, &motorProxyDevice} {
     if(!initScriptPath.empty()) {
       initHandler = std::make_unique<ScriptedInitHandler>(this, "ExternalScript", "", initScriptPath, motorProxyDevice);

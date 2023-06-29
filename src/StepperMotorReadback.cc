@@ -178,7 +178,7 @@ namespace ChimeraTK::MotorDriver {
 
     try {
       // Throws if dummy is used
-      _motor->get()->getSafeCurrentLimit();
+      std::ignore = _motor->get()->getSafeCurrentLimit();
     }
     catch(ChimeraTK::logic_error&) {
       _motorIsDummy = true;
