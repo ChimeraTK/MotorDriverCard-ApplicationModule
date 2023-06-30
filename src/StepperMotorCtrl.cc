@@ -175,8 +175,6 @@ namespace ChimeraTK::MotorDriver {
     if(_motor->getMotorParameters().motorType == StepperMotorType::LINEAR) {
       appendCalibrationToMap();
     }
-
-    writeAll();
   }
 
   /********************************************************************************************************************/
@@ -195,14 +193,15 @@ namespace ChimeraTK::MotorDriver {
   void ControlInputHandler::mainLoop() {
     auto inputGroup = this->readAnyGroup();
 
-    // Write once to propagate inital values
-    writeAll();
 
     // before anything else, wait for the deviceBecameFunctional trigger
     // then flush out all values that are written during recovery
 
     inputGroup.readUntil(deviceBecameFunctional.getId());
     writeRecoveryValues();
+
+    // Write once to propagate inital values
+    writeAll();
 
     while(true) {
       notification.message = "";
