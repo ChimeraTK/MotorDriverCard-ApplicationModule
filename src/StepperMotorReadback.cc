@@ -117,7 +117,6 @@ namespace ChimeraTK::MotorDriver {
     position.targetValue = _motor->get()->recalculateStepsInUnits(position.targetValueInSteps);
 
     status.isIdle = _motor->get()->isSystemIdle();
-    status.state = _motor->get()->getState();
     swLimits.isEnabled = _motor->get()->getSoftwareLimitsEnabled();
     swLimits.maxPositionInSteps = _motor->get()->getMaxPositionLimitInSteps();
     swLimits.minPositionInSteps = _motor->get()->getMinPositionLimitInSteps();

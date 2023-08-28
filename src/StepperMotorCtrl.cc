@@ -16,8 +16,10 @@ namespace detail {
 namespace ChimeraTK::MotorDriver {
 
   ControlInputHandler::ControlInputHandler(ModuleGroup* owner, const std::string& name, const std::string& description,
-      std::shared_ptr<Motor> motor, DeviceModule* deviceModule)
-  : ApplicationModule(owner, name, description), _motor(std::move(motor)) {
+      std::shared_ptr<Motor> motor, const std::string& triggerPath, DeviceModule* deviceModule)
+  : ApplicationModule(owner, name, description), trigger{this, triggerPath, "Trigger to initiate read-out from HW",
+                                                     std::unordered_set<std::string>{"MOT_TRIG"}},
+    _motor(std::move(motor)) {
     // If motor has HW reference switches,
     // calibration is supported
     if(_motor->getMotorParameters().motorType == StepperMotorType::LINEAR) {
@@ -41,43 +43,52 @@ namespace ChimeraTK::MotorDriver {
     addMapping(control.stop, ::detail::SKIP_ON_RECOVERY, [this] {
       if(control.stop) {
         _motor->get()->stop();
+        motorState.writeIfDifferent(_motor->get()->getState());
       }
     });
     addMapping(control.emergencyStop, ::detail::SKIP_ON_RECOVERY, [this] {
       if(control.emergencyStop) {
         _motor->get()->emergencyStop();
+        motorState.writeIfDifferent(_motor->get()->getState());
       }
     });
     addMapping(control.resetError, ::detail::SKIP_ON_RECOVERY, [this] {
       if(control.resetError) {
         _motor->get()->resetError();
+        motorState.writeIfDifferent(_motor->get()->getState());
       }
     });
-    addMapping(control.enableAutostart, ::detail::WRITE_ON_RECOVERY,
-        [this] { _motor->get()->setAutostart(control.enableAutostart); });
+    addMapping(control.enableAutostart, ::detail::WRITE_ON_RECOVERY, [this] {
+      _motor->get()->setAutostart(control.enableAutostart);
+      motorState.writeIfDifferent(_motor->get()->getState());
+    });
     addMapping(control.enableFullStepping, ::detail::WRITE_ON_RECOVERY,
         [this] { _motor->get()->enableFullStepping(control.enableFullStepping); });
 
     addMapping(positionSetpoint.positionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setTargetPositionInSteps(positionSetpoint.positionInSteps);
+      motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
         notification.message = "Could not set target position: " + ChimeraTK::MotorDriver::toString(code);
       }
     });
     addMapping(positionSetpoint.position, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setTargetPosition(positionSetpoint.position);
+      motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
         notification.message = "Could not set target position: " + ChimeraTK::MotorDriver::toString(code);
       }
     });
     addMapping(positionSetpoint.relativePositionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->moveRelativeInSteps(positionSetpoint.relativePositionInSteps);
+      motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
         notification.message = "Could not set relative position: " + ChimeraTK::MotorDriver::toString(code);
       }
     });
     addMapping(positionSetpoint.relativePosition, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->moveRelative(positionSetpoint.relativePosition);
+      motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
         notification.message = "Could not set relative position: " + ChimeraTK::MotorDriver::toString(code);
       }
@@ -85,12 +96,14 @@ namespace ChimeraTK::MotorDriver {
 
     addMapping(referenceSettings.positionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setActualPositionInSteps(referenceSettings.positionInSteps);
+      motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
         notification.message = "Could not set reference position in steps: " + ChimeraTK::MotorDriver::toString(code);
       }
     });
     addMapping(referenceSettings.position, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setActualPosition(referenceSettings.position);
+      motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
         notification.message = "Could not set reference position: " + ChimeraTK::MotorDriver::toString(code);
       }
@@ -148,6 +161,7 @@ namespace ChimeraTK::MotorDriver {
     addMapping(userLimits.current, ::detail::WRITE_ON_RECOVERY, [this] {
       try {
         auto code = _motor->get()->setUserCurrentLimit(userLimits.current);
+        motorState.writeIfDifferent(_motor->get()->getState());
         if(code != ExitStatus::SUCCESS) {
           notification.message = "Could not set user current limits: " + ChimeraTK::MotorDriver::toString(code);
         }
@@ -193,15 +207,20 @@ namespace ChimeraTK::MotorDriver {
   void ControlInputHandler::mainLoop() {
     auto inputGroup = this->readAnyGroup();
 
-
     // before anything else, wait for the deviceBecameFunctional trigger
     // then flush out all values that are written during recovery
+
+    motorState.setDataValidity(DataValidity::faulty);
+    motorState.write();
 
     inputGroup.readUntil(deviceBecameFunctional.getId());
     writeRecoveryValues();
 
     // Write once to propagate inital values
-    writeAll();
+    motorState.setDataValidity(DataValidity::ok);
+    motorState.writeIfDifferent(_motor->get()->getState());
+    dummySignals.writeAll();
+    notification.writeAll();
 
     while(true) {
       notification.message = "";
@@ -210,6 +229,13 @@ namespace ChimeraTK::MotorDriver {
       auto changedVarId = inputGroup.readAny();
       if(changedVarId == deviceBecameFunctional.getId()) {
         writeRecoveryValues();
+        continue;
+      }
+
+      // Some state changes are only triggered by the readout of the state, so we regularly
+      // read it out and publish any changes
+      if(changedVarId == trigger.getId() && _motor->isOpen()) {
+        motorState.writeIfDifferent(_motor->get()->getState());
         continue;
       }
 
@@ -233,10 +259,10 @@ namespace ChimeraTK::MotorDriver {
         notification.hasMessage = true;
       }
 
-      dummySignals.dummyMotorStop = control.stop || control.emergencyStop;
+      dummySignals.dummyMotorStop.writeIfDifferent(control.stop || control.emergencyStop);
       dummySignals.dummyMotorTrigger++;
-
-      writeAll();
+      dummySignals.dummyMotorTrigger.write();
+      notification.writeAll();
     }
   }
 
@@ -245,6 +271,7 @@ namespace ChimeraTK::MotorDriver {
   void ControlInputHandler::enableCallback() {
     if(control.enable) {
       _motor->get()->setEnabled(true);
+      motorState.writeIfDifferent(_motor->get()->getState());
     }
   }
 
@@ -253,6 +280,7 @@ namespace ChimeraTK::MotorDriver {
   void ControlInputHandler::disableCallback() {
     if(control.disable) {
       _motor->get()->setEnabled(false);
+      motorState.writeIfDifferent(_motor->get()->getState());
     }
   }
 
@@ -262,6 +290,7 @@ namespace ChimeraTK::MotorDriver {
     if(control.start) {
       if(_motor->get()->isSystemIdle()) {
         _motor->get()->start();
+        motorState.writeIfDifferent(_motor->get()->getState());
       }
       else {
         notification.message = "WARNING: Called startMotor while motor is not in IDLE state.";
