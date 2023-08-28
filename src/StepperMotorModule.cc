@@ -15,7 +15,8 @@ namespace ChimeraTK::MotorDriver {
             "&monitorRegister=" + motor->getMotorParameters().moduleName + "/WORD_PROJ_VERSION" +
             "&driverId=" + std::to_string(motor->getMotorParameters().driverId) + ")",
         triggerPath},
-    ctrlInputHandler{this, "controlInput", "Handles the control input to the motor driver.", motor, &motorProxyDevice},
+    ctrlInputHandler{
+        this, "controlInput", "Handles the control input to the motor driver.", motor, triggerPath, &motorProxyDevice},
     readbackHandler{motor, this, "readback", "Signals read from the motor driver", triggerPath, &motorProxyDevice} {
     if(!initScriptPath.empty()) {
       initHandler = std::make_unique<ScriptedInitHandler>(this, "ExternalScript", "", initScriptPath, motorProxyDevice);

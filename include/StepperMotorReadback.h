@@ -53,7 +53,6 @@ namespace ChimeraTK::MotorDriver {
     ScalarOutput<int> isIdle{
         this, "isIdle", "", "Flags if system is idle and a movement or calibration can be started"};
 
-    ScalarOutput<std::string> state{this, "state", "", "State of the motor driver"};
     ScalarOutput<int> errorId{this, "errorId", "", "Error ID of the motor driver"};
 
     ScalarOutput<int> isFullStepping{

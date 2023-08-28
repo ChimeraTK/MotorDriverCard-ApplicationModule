@@ -135,7 +135,7 @@ namespace ChimeraTK::MotorDriver {
   class ControlInputHandler : public ApplicationModule {
    public:
     ControlInputHandler(ModuleGroup* owner, const std::string& name, const std::string& description,
-        std::shared_ptr<Motor> motor, DeviceModule* deviceModule);
+        std::shared_ptr<Motor> motor, const std::string& triggerPath, DeviceModule* deviceModule);
 
     void prepare() override;
     void mainLoop() override;
@@ -154,6 +154,7 @@ namespace ChimeraTK::MotorDriver {
     void addMapping(TransferElementAbstractor& element, bool writeOnRecovery, std::function<void(void)> func);
 
     VoidInput deviceBecameFunctional;
+    VoidInput trigger{};
 
     MotorControl control{this, "control", "Control words of the motor", {"MOTOR"}};
     PositionSetpoint positionSetpoint{this, "positionSetpoint", "Position setpoints", {"MOTOR"}};
@@ -164,6 +165,7 @@ namespace ChimeraTK::MotorDriver {
     Notification notification{this, "notification", "User notification", {"MOTOR"}};
     DummySignals dummySignals{this, "dummySignals", " Signals triggering the dummy motor", {"DUMMY"}};
     // CalibrationCommands _calibrationCommands;
+    ScalarOutput<std::string> motorState{this, "../readback/status/state", "State of motor control", {"MOTOR"}};
 
     // Callbacks for the BasiStepperMotor
     void enableCallback();
