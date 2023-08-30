@@ -32,7 +32,7 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ControlInputHandler::addMapping(
-      TransferElementAbstractor& element, bool writeOnRecovery, std::function<void(void)> function) {
+      TransferElementAbstractor& element, bool writeOnRecovery, const std::function<void(void)>& function) {
     _funcMap[element.getId()] = {writeOnRecovery, element.getName(), function};
   }
 

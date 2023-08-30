@@ -151,7 +151,7 @@ namespace ChimeraTK::MotorDriver {
      */
     using FunctionMapEntry = std::tuple<bool, std::string, std::function<void(void)>>;
     std::map<TransferElementID, FunctionMapEntry> _funcMap{};
-    void addMapping(TransferElementAbstractor& element, bool writeOnRecovery, std::function<void(void)> func);
+    void addMapping(TransferElementAbstractor& element, bool writeOnRecovery, const std::function<void(void)>& func);
 
     VoidInput deviceBecameFunctional;
     VoidInput trigger{};
