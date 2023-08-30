@@ -151,7 +151,7 @@ namespace ChimeraTK::MotorDriver {
         notification.message = "Could not set max position limits: " + ChimeraTK::MotorDriver::toString(code);
       }
     });
-    addMapping(swLimits.minPositionInSteps, ::detail::WRITE_ON_RECOVERY, [this] {
+    addMapping(swLimits.minPositionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setMinPositionLimitInSteps(swLimits.minPositionInSteps);
       if(code != ExitStatus::SUCCESS) {
         notification.message = "Could not set min position limits: " + ChimeraTK::MotorDriver::toString(code);
