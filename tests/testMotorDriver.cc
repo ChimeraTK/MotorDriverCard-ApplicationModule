@@ -103,7 +103,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
 
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/autostartEnabled"), 1);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "idle");
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/controlInput/notification/hasMessage"), 0);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<ChimeraTK::Boolean>("Motor/controlInput/notification/hasMessage"), false);
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
       static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::SIMPLE));
 
@@ -117,7 +117,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   motorState.read();
 
   // Target value should have been applied and module transitioned ito state "moving"
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/controlInput/notification/hasMessage"), 0);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<ChimeraTK::Boolean>("Motor/controlInput/notification/hasMessage"), false);
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/position/targetValueInSteps"), targetPosition);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "moving");
 
