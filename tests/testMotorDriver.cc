@@ -84,22 +84,26 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   // Trigger readout loop once, so the motor device "wakes up" and actually initializes itself
   testServer.motor->motorProxyDevice.reportException("Exception trigger from test to toggle deviceBecameFunctional");
   testFacility.stepApplication();
-  motorState.read();
+  // Get rid of all the intermediate changes due to exception reporting
+  motorState.readLatest();
 
   // Application should start with disabled motor (initial value being send)
   // Directly check. Initial values are already received.
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "disabled");
 
+  testFacility.writeScalar<int>("Motor/controlInput/referenceSettings/positionInSteps", 0);
+  testFacility.stepApplication();
+
   // Enable stepper motor and set a reference position
   // (the latter should yield ChimeraTK::MotorDriver::CalibrationMode::SIMPLE)
   testFacility.writeScalar<int>("Motor/controlInput/control/enable", 1);
-  testFacility.writeScalar<int>("Motor/controlInput/control/enableAutostart", 1);
-  testFacility.writeScalar<int>("Motor/controlInput/referenceSettings/positionInSteps", 0);
+  testFacility.stepApplication();
+  motorState.read();
 
+  testFacility.writeScalar<int>("Motor/controlInput/control/enableAutostart", 1);
   testFacility.stepApplication();
   trigger.write();
   testFacility.stepApplication();
-  motorState.read();
 
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/autostartEnabled"), 1);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "idle");
@@ -232,6 +236,7 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
   // Trigger readout loop once, so the motor device "wakes up" and actually initializes itself
   testServer.motor->motorProxyDevice.reportException("Exception trigger from test to toggle deviceBecameFunctional");
   testFacility.stepApplication();
+  // Get rid of all the intermediate changes due to exception reporting
   motorState.readLatest();
 
   // Application should start with disabled motor (initial value being send)
@@ -242,11 +247,10 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
   // (the latter should yield ChimeraTK::MotorDriver::CalibrationMode::SIMPLE)
   testFacility.writeScalar<int>("Motor/controlInput/control/enable", 1);
   testFacility.writeScalar<int>("Motor/controlInput/control/enableAutostart", 1);
-
   testFacility.stepApplication();
+  motorState.readLatest();
   trigger.write();
   testFacility.stepApplication();
-  motorState.read();
 
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/autostartEnabled"), 1);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "idle");
