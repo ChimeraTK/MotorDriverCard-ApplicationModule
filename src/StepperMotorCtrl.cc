@@ -33,7 +33,7 @@ namespace ChimeraTK::MotorDriver {
 
   void ControlInputHandler::addMapping(
       TransferElementAbstractor& element, bool writeOnRecovery, const std::function<void(void)>& function) {
-    _funcMap[element.getId()] = {writeOnRecovery, element.getName(), function};
+    _funcMap[element.getId()] = {writeOnRecovery, &element, function};
   }
 
   void ControlInputHandler::createFunctionMap() {
@@ -195,9 +195,15 @@ namespace ChimeraTK::MotorDriver {
 
   void ControlInputHandler::writeRecoveryValues() {
     for(auto& entry : _funcMap) {
-      auto& [inRecovery, _, call] = entry.second;
+      auto& [inRecovery, element, call] = entry.second;
       if(inRecovery) {
-        call();
+        if(element->getVersionNumber() != VersionNumber(nullptr)) {
+          call();
+        }
+        else {
+          std::cout << "Skipping write of accessor " << element->getName()
+                    << " on recovery because it was never written to" << std::endl;
+        }
       }
     }
   }

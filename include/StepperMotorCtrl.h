@@ -149,7 +149,7 @@ namespace ChimeraTK::MotorDriver {
      * function of the MotorDriverCard library. This allows to pass on
      * the changed PV to the library by the ID returned from readAny().
      */
-    using FunctionMapEntry = std::tuple<bool, std::string, std::function<void(void)>>;
+    using FunctionMapEntry = std::tuple<bool, TransferElementAbstractor*, std::function<void(void)>>;
     std::map<TransferElementID, FunctionMapEntry> _funcMap{};
     void addMapping(TransferElementAbstractor& element, bool writeOnRecovery, const std::function<void(void)>& func);
 
