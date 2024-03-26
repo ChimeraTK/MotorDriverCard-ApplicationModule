@@ -5,7 +5,7 @@ include(GNUInstallDirs)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 00)
 set(${PROJECT_NAME}_MINOR_VERSION 08)
-set(${PROJECT_NAME}_PATCH_VERSION 01)
+set(${PROJECT_NAME}_PATCH_VERSION 02)
 include(cmake/set_version_numbers.cmake)
 
 find_package(ChimeraTK-ApplicationCore 01.00 REQUIRED)
