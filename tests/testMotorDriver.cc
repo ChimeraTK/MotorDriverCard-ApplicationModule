@@ -79,7 +79,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   _motorControlerDummy->setEnabled(true);
   _motorControlerDummy->setMotorCurrentEnabled(true);
 
-  BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::faulty);
+  BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::ok);
 
   // Trigger readout loop once, so the motor device "wakes up" and actually initializes itself
   testServer.motor->motorProxyDevice.reportException("Exception trigger from test to toggle deviceBecameFunctional");
@@ -157,16 +157,15 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
   auto trigger = testFacility.getVoid("Motor/readback/tick");
   auto motorState = testFacility.getScalar<std::string>("Motor/readback/status/state");
 
-  BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::faulty);
+  BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::ok);
 
   // Trigger readout loop once, so the motor device "wakes up" and actually initializes itself
   testServer.motor->motorProxyDevice.reportException("Exception trigger from test to toggle deviceBecameFunctional");
   testFacility.stepApplication();
-  motorState.read();
+  motorState.readLatest();
 
   trigger.write();
   testFacility.stepApplication();
-  motorState.read();
 
   // Application should start with disabled motor
   // We currently have to test for FULL instead of SIMPLE, because the MotorControlerDummy does
@@ -231,7 +230,7 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
   _motorControlerDummy->setPositiveEndSwitch(60000);
   _motorControlerDummy->setNegativeEndSwitch(-60000);
 
-  BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::faulty);
+  BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::ok);
 
   // Trigger readout loop once, so the motor device "wakes up" and actually initializes itself
   testServer.motor->motorProxyDevice.reportException("Exception trigger from test to toggle deviceBecameFunctional");
