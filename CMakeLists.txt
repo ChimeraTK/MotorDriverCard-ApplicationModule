@@ -18,7 +18,7 @@ include(cmake/enable_doxygen_documentation.cmake)
 
 
 # The shared library
-set(SRC StepperMotorModule.cc StepperMotorCtrl.cc StepperMotorReadback.cc)
+set(SRC StepperMotorModule.cc StepperMotorCtrl.cc StepperMotorReadback.cc StatusModule.cc)
 foreach(SOURCE ${SRC})
     set(LIBRARY_SOURCES ${LIBRARY_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/src/${SOURCE})
 endforeach()

@@ -32,130 +32,158 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ControlInputHandler::addMapping(
-      TransferElementAbstractor& element, bool writeOnRecovery, const std::function<void(void)>& function) {
+      TransferElementAbstractor& element, bool writeOnRecovery, const std::function<std::string(void)>& function) {
     _funcMap[element.getId()] = {writeOnRecovery, element.getName(), function};
   }
 
   void ControlInputHandler::createFunctionMap() {
-    addMapping(control.enable, ::detail::SKIP_ON_RECOVERY, [this] { enableCallback(); });
-    addMapping(control.disable, ::detail::SKIP_ON_RECOVERY, [this] { disableCallback(); });
-    addMapping(control.start, ::detail::SKIP_ON_RECOVERY, [this] { startCallback(); });
+    addMapping(control.enable, ::detail::SKIP_ON_RECOVERY, [this] { return enableCallback(); });
+    addMapping(control.disable, ::detail::SKIP_ON_RECOVERY, [this] { return disableCallback(); });
+    addMapping(control.start, ::detail::SKIP_ON_RECOVERY, [this] { return startCallback(); });
     addMapping(control.stop, ::detail::SKIP_ON_RECOVERY, [this] {
       if(control.stop) {
         _motor->get()->stop();
         motorState.writeIfDifferent(_motor->get()->getState());
       }
+      return "";
     });
     addMapping(control.emergencyStop, ::detail::SKIP_ON_RECOVERY, [this] {
       if(control.emergencyStop) {
         _motor->get()->emergencyStop();
         motorState.writeIfDifferent(_motor->get()->getState());
       }
+      return "";
     });
     addMapping(control.resetError, ::detail::SKIP_ON_RECOVERY, [this] {
       if(control.resetError) {
         _motor->get()->resetError();
         motorState.writeIfDifferent(_motor->get()->getState());
       }
+
+      return "";
     });
     addMapping(control.enableAutostart, ::detail::WRITE_ON_RECOVERY, [this] {
       _motor->get()->setAutostart(control.enableAutostart);
       motorState.writeIfDifferent(_motor->get()->getState());
+      return "";
     });
-    addMapping(control.enableFullStepping, ::detail::WRITE_ON_RECOVERY,
-        [this] { _motor->get()->enableFullStepping(control.enableFullStepping); });
+    addMapping(control.enableFullStepping, ::detail::WRITE_ON_RECOVERY, [this] {
+      _motor->get()->enableFullStepping(control.enableFullStepping);
+      return "";
+    });
 
     addMapping(positionSetpoint.positionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setTargetPositionInSteps(positionSetpoint.positionInSteps);
       motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set target position: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set target position: " + ChimeraTK::MotorDriver::toString(code);
       }
+
+      return std::string();
     });
     addMapping(positionSetpoint.position, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setTargetPosition(positionSetpoint.position);
       motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set target position: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set target position: " + ChimeraTK::MotorDriver::toString(code);
       }
+
+      return std::string();
     });
     addMapping(positionSetpoint.relativePositionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->moveRelativeInSteps(positionSetpoint.relativePositionInSteps);
       motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set relative position: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set relative position: " + ChimeraTK::MotorDriver::toString(code);
       }
+      return std::string();
     });
     addMapping(positionSetpoint.relativePosition, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->moveRelative(positionSetpoint.relativePosition);
       motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set relative position: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set relative position: " + ChimeraTK::MotorDriver::toString(code);
       }
+      return std::string();
     });
 
     addMapping(referenceSettings.positionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setActualPositionInSteps(referenceSettings.positionInSteps);
       motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set reference position in steps: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set reference position in steps: " + ChimeraTK::MotorDriver::toString(code);
       }
+      return std::string();
     });
     addMapping(referenceSettings.position, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setActualPosition(referenceSettings.position);
       motorState.writeIfDifferent(_motor->get()->getState());
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set reference position: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set reference position: " + ChimeraTK::MotorDriver::toString(code);
       }
+      return std::string();
     });
     addMapping(referenceSettings.encoderPosition, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setActualEncoderPosition(referenceSettings.encoderPosition);
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set reference encoder position: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set reference encoder position: " + ChimeraTK::MotorDriver::toString(code);
       }
+
+      return std::string();
     });
     addMapping(referenceSettings.axisTranslationInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->translateAxisInSteps(referenceSettings.axisTranslationInSteps);
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set axis translation: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set axis translation: " + ChimeraTK::MotorDriver::toString(code);
       }
+
+      return std::string();
     });
     addMapping(referenceSettings.axisTranslation, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->translateAxis(referenceSettings.axisTranslation);
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set axis translation: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set axis translation: " + ChimeraTK::MotorDriver::toString(code);
       }
+
+      return std::string();
     });
 
     addMapping(swLimits.enable, ::detail::WRITE_ON_RECOVERY, [this] {
       auto code = _motor->get()->setSoftwareLimitsEnabled(swLimits.enable);
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not enable software limits: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not enable software limits: " + ChimeraTK::MotorDriver::toString(code);
       }
+      return std::string();
     });
     addMapping(swLimits.maxPosition, ::detail::WRITE_ON_RECOVERY, [this] {
       auto code = _motor->get()->setMaxPositionLimit(swLimits.maxPosition);
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set max position limit: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set max position limit: " + ChimeraTK::MotorDriver::toString(code);
       }
+      return std::string();
     });
     addMapping(swLimits.minPosition, ::detail::WRITE_ON_RECOVERY, [this] {
       auto code = _motor->get()->setMinPositionLimit(swLimits.minPosition);
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set min position limits: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set min position limits: " + ChimeraTK::MotorDriver::toString(code);
       }
+
+      return std::string();
     });
     addMapping(swLimits.maxPositionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setMaxPositionLimitInSteps(swLimits.maxPositionInSteps);
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set max position limits: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set max position limits: " + ChimeraTK::MotorDriver::toString(code);
       }
+
+      return std::string();
     });
     addMapping(swLimits.minPositionInSteps, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setMinPositionLimitInSteps(swLimits.minPositionInSteps);
       if(code != ExitStatus::SUCCESS) {
-        notification.message = "Could not set min position limits: " + ChimeraTK::MotorDriver::toString(code);
+        return "Could not set min position limits: " + ChimeraTK::MotorDriver::toString(code);
       }
+      return std::string();
     });
 
     addMapping(userLimits.current, ::detail::WRITE_ON_RECOVERY, [this] {
@@ -163,23 +191,25 @@ namespace ChimeraTK::MotorDriver {
         auto code = _motor->get()->setUserCurrentLimit(userLimits.current);
         motorState.writeIfDifferent(_motor->get()->getState());
         if(code != ExitStatus::SUCCESS) {
-          notification.message = "Could not set user current limits: " + ChimeraTK::MotorDriver::toString(code);
+          return "Could not set user current limits: " + ChimeraTK::MotorDriver::toString(code);
         }
       }
       catch(ChimeraTK::logic_error&) {
         // Do nothing, this is a dummy then
       }
+      return std::string();
     });
     addMapping(userLimits.speed, ::detail::WRITE_ON_RECOVERY, [this] {
       try {
         auto code = _motor->get()->setUserSpeedLimit(userLimits.speed);
         if(code != ExitStatus::SUCCESS) {
-          notification.message = "Could not set user speed limits: " + ChimeraTK::MotorDriver::toString(code);
+          return "Could not set user speed limits: " + ChimeraTK::MotorDriver::toString(code);
         }
       }
       catch(ChimeraTK::logic_error&) {
         // Do nothing, this is a dummy then
       }
+      return std::string();
     });
   }
 
@@ -197,7 +227,7 @@ namespace ChimeraTK::MotorDriver {
     for(auto& entry : _funcMap) {
       auto& [inRecovery, _, call] = entry.second;
       if(inRecovery) {
-        call();
+        std::ignore = call();
       }
     }
   }
@@ -220,15 +250,17 @@ namespace ChimeraTK::MotorDriver {
     motorState.setDataValidity(DataValidity::ok);
     motorState.writeIfDifferent(_motor->get()->getState());
     dummySignals.writeAll();
-    notification.writeAll();
+    message.write();
 
     while(true) {
-      notification.message = "";
-      notification.hasMessage = false;
+      std::string notificationMessage;
 
       auto changedVarId = inputGroup.readAny();
       if(changedVarId == deviceBecameFunctional.getId()) {
         writeRecoveryValues();
+        // Flush state of notifications
+        message.write();
+
         continue;
       }
 
@@ -236,113 +268,116 @@ namespace ChimeraTK::MotorDriver {
       // read it out and publish any changes
       if(changedVarId == trigger.getId() && _motor->isOpen()) {
         motorState.writeIfDifferent(_motor->get()->getState());
+        message.writeIfDifferent(message);
         continue;
       }
 
       if(not _motor->isOpen()) {
-        notification.hasMessage = true;
-        notification.message = "Motor device is in recovery, not doing control step";
+        notificationMessage = "Motor device is in recovery, not doing control step";
       }
       else {
         // FIXME Keep this only as long as we rely on the dummy for tests
         try {
-          std::get<2>(_funcMap.at(changedVarId))();
+          notificationMessage = std::get<2>(_funcMap.at(changedVarId))();
         }
         catch(ChimeraTK::logic_error& e) {
-          notification.message = "Exception: " + std::string(e.what());
+          notificationMessage = "Exception: " + std::string(e.what());
         }
-      }
-
-      // We could either use string::compare or cast the notification.message to string.
-      // NOLINTNEXTLINE(readability-string-compare)
-      if(std::string("").compare(notification.message)) {
-        notification.hasMessage = true;
       }
 
       dummySignals.dummyMotorStop.writeIfDifferent(control.stop || control.emergencyStop);
       dummySignals.dummyMotorTrigger++;
       dummySignals.dummyMotorTrigger.write();
-      notification.writeAll();
+      message.writeIfDifferent(notificationMessage);
     }
   }
 
   /********************************************************************************************************************/
 
-  void ControlInputHandler::enableCallback() {
+  std::string ControlInputHandler::enableCallback() {
     if(control.enable) {
       _motor->get()->setEnabled(true);
       motorState.writeIfDifferent(_motor->get()->getState());
     }
+    return "";
   }
 
   /********************************************************************************************************************/
 
-  void ControlInputHandler::disableCallback() {
+  std::string ControlInputHandler::disableCallback() {
     if(control.disable) {
       _motor->get()->setEnabled(false);
       motorState.writeIfDifferent(_motor->get()->getState());
     }
+
+    return {};
   }
 
   /********************************************************************************************************************/
 
-  void ControlInputHandler::startCallback() {
+  std::string ControlInputHandler::startCallback() {
     if(control.start) {
       if(_motor->get()->isSystemIdle()) {
         _motor->get()->start();
         motorState.writeIfDifferent(_motor->get()->getState());
       }
       else {
-        notification.message = "WARNING: Called startMotor while motor is not in IDLE state.";
+        return "WARNING: Called startMotor while motor is not in IDLE state.";
       }
     }
+
+    return {};
   }
 
   /********************************************************************************************************************/
 
   void ControlInputHandler::appendCalibrationToMap() {
-    addMapping(control.calibrationCtrl.calibrateMotor, ::detail::SKIP_ON_RECOVERY, [this] { calibrateCallback(); });
+    addMapping(
+        control.calibrationCtrl.calibrateMotor, ::detail::SKIP_ON_RECOVERY, [this] { return calibrateCallback(); });
     addMapping(control.calibrationCtrl.determineTolerance, ::detail::SKIP_ON_RECOVERY,
-        [this] { determineToleranceCallback(); });
+        [this] { return determineToleranceCallback(); });
   }
 
   /********************************************************************************************************************/
 
-  void ControlInputHandler::calibrateCallback() {
+  std::string ControlInputHandler::calibrateCallback() {
     if(!_motor->get()->hasHWReferenceSwitches()) {
-      return;
+      return {};
     }
 
     if(control.calibrationCtrl.calibrateMotor) {
       if(_motor->get()->isSystemIdle()) {
         auto code = _motor->get()->calibrate();
         if(code != ExitStatus::SUCCESS) {
-          notification.message = "Could not calibrate motor: " + ChimeraTK::MotorDriver::toString(code);
+          return "Could not calibrate motor: " + ChimeraTK::MotorDriver::toString(code);
         }
       }
       else {
-        notification.message = "WARNING: Called calibrateMotor while motor is not in IDLE state.";
+        return "WARNING: Called calibrateMotor while motor is not in IDLE state.";
       }
     }
+
+    return {};
   }
 
   /********************************************************************************************************************/
 
-  void ControlInputHandler::determineToleranceCallback() {
+  std::string ControlInputHandler::determineToleranceCallback() {
     if(!_motor->get()->hasHWReferenceSwitches()) {
-      return;
+      return "";
     }
 
     if(control.calibrationCtrl.determineTolerance) {
       if(_motor->get()->isSystemIdle()) {
         auto code = _motor->get()->determineTolerance();
         if(code != ExitStatus::SUCCESS) {
-          notification.message = "Could not determine endswitch tolerance: " + ChimeraTK::MotorDriver::toString(code);
+          return "Could not determine endswitch tolerance: " + ChimeraTK::MotorDriver::toString(code);
         }
       }
       else {
-        notification.message = "WARNING: Called determineTolerance while motor is not in IDLE state.";
+        return "WARNING: Called determineTolerance while motor is not in IDLE state.";
       }
     }
+    return "";
   }
 } // namespace ChimeraTK::MotorDriver

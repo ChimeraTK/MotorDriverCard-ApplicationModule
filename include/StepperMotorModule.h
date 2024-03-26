@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Motor.h"
+#include "StatusModule.h"
 #include "StepperMotorCtrl.h"
 #include "StepperMotorReadback.h"
 
@@ -23,5 +24,6 @@ namespace ChimeraTK::MotorDriver {
     std::unique_ptr<ScriptedInitHandler> initHandler;
     ControlInputHandler ctrlInputHandler;
     ReadbackHandler readbackHandler;
+    StatusModule statusModule{this};
   };
 } // namespace ChimeraTK::MotorDriver
