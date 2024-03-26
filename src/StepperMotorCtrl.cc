@@ -253,42 +253,48 @@ namespace ChimeraTK::MotorDriver {
     message.write();
 
     while(true) {
-      std::string notificationMessage;
+      try {
+        std::string notificationMessage;
 
-      auto changedVarId = inputGroup.readAny();
-      if(changedVarId == deviceBecameFunctional.getId()) {
-        writeRecoveryValues();
-        // Flush state of notifications
-        message.write();
+        auto changedVarId = inputGroup.readAny();
+        if(changedVarId == deviceBecameFunctional.getId()) {
+          writeRecoveryValues();
+          // Flush state of notifications
+          message.write();
 
-        continue;
-      }
-
-      // Some state changes are only triggered by the readout of the state, so we regularly
-      // read it out and publish any changes
-      if(changedVarId == trigger.getId() && _motor->isOpen()) {
-        motorState.writeIfDifferent(_motor->get()->getState());
-        message.writeIfDifferent(message);
-        continue;
-      }
-
-      if(not _motor->isOpen()) {
-        notificationMessage = "Motor device is in recovery, not doing control step";
-      }
-      else {
-        // FIXME Keep this only as long as we rely on the dummy for tests
-        try {
-          notificationMessage = std::get<2>(_funcMap.at(changedVarId))();
+          continue;
         }
-        catch(ChimeraTK::logic_error& e) {
-          notificationMessage = "Exception: " + std::string(e.what());
-        }
-      }
 
-      dummySignals.dummyMotorStop.writeIfDifferent(control.stop || control.emergencyStop);
-      dummySignals.dummyMotorTrigger++;
-      dummySignals.dummyMotorTrigger.write();
-      message.writeIfDifferent(notificationMessage);
+        // Some state changes are only triggered by the readout of the state, so we regularly
+        // read it out and publish any changes
+        if(changedVarId == trigger.getId() && _motor->isOpen()) {
+          motorState.writeIfDifferent(_motor->get()->getState());
+          message.writeIfDifferent(message);
+          continue;
+        }
+
+        if(not _motor->isOpen()) {
+          notificationMessage = "Motor device is in recovery, not doing control step";
+        }
+        else {
+          // FIXME Keep this only as long as we rely on the dummy for tests
+          try {
+            notificationMessage = std::get<2>(_funcMap.at(changedVarId))();
+          }
+          catch(ChimeraTK::logic_error& e) {
+            notificationMessage = "Exception: " + std::string(e.what());
+          }
+        }
+
+        dummySignals.dummyMotorStop.writeIfDifferent(control.stop || control.emergencyStop);
+        dummySignals.dummyMotorTrigger++;
+        dummySignals.dummyMotorTrigger.write();
+        message.writeIfDifferent(notificationMessage);
+      }
+      catch(ChimeraTK::runtime_error& e) {
+        // Comes from the state readout. Do nothing here. either it was a single glitch
+        // or the readout module will see it as well and start the recovery procedure
+      }
     }
   }
 
