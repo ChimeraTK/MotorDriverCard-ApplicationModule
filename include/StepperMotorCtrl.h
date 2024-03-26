@@ -95,17 +95,6 @@ namespace ChimeraTK::MotorDriver {
 
   /********************************************************************************************************************/
 
-  /// Notifications to the user
-  struct Notification : public VariableGroup {
-    using VariableGroup::VariableGroup;
-
-    ScalarOutput<ChimeraTK::Boolean> hasMessage{
-        this, "hasMessage", "", "Warning flag, true when an invalid input has been issued."};
-    ScalarOutput<std::string> message{this, "message", "", "Message for user notification from ControlInput module"};
-  };
-
-  /********************************************************************************************************************/
-
   /// User-definable limits
   struct UserLimits : public VariableGroup {
     using VariableGroup::VariableGroup;
@@ -149,9 +138,10 @@ namespace ChimeraTK::MotorDriver {
      * function of the MotorDriverCard library. This allows to pass on
      * the changed PV to the library by the ID returned from readAny().
      */
-    using FunctionMapEntry = std::tuple<bool, std::string, std::function<void(void)>>;
+    using FunctionMapEntry = std::tuple<bool, std::string, std::function<std::string(void)>>;
     std::map<TransferElementID, FunctionMapEntry> _funcMap{};
-    void addMapping(TransferElementAbstractor& element, bool writeOnRecovery, const std::function<void(void)>& func);
+    void addMapping(
+        TransferElementAbstractor& element, bool writeOnRecovery, const std::function<std::string(void)>& func);
 
     VoidInput deviceBecameFunctional;
     VoidInput trigger{};
@@ -162,19 +152,20 @@ namespace ChimeraTK::MotorDriver {
     SoftwareLimitCtrl swLimits{this, "swLimits", "Control data of SW limits", {"MOTOR"}};
     ReferenceSettings referenceSettings{
         this, "referenceSettings", "Settings to define the position reference", {"MOTOR"}};
-    Notification notification{this, "notification", "User notification", {"MOTOR"}};
     DummySignals dummySignals{this, "dummySignals", " Signals triggering the dummy motor", {"DUMMY"}};
     // CalibrationCommands _calibrationCommands;
-    ScalarOutput<std::string> motorState{this, "../readback/status/state", "State of motor control", {"MOTOR"}};
+    ScalarOutput<std::string> message{
+        this, "../StatusPropagator/message", "n/a", "Message for user notification from ControlInput module"};
+    ScalarOutput<std::string> motorState{this, "../StatusPropagator/motorState", "n/a", "State of motor control"};
 
     // Callbacks for the BasiStepperMotor
-    void enableCallback();
-    void disableCallback();
-    void startCallback();
+    std::string enableCallback();
+    std::string disableCallback();
+    std::string startCallback();
 
     // Callbacks for the LinearStepperMotor
-    void calibrateCallback();
-    void determineToleranceCallback();
+    std::string calibrateCallback();
+    std::string determineToleranceCallback();
 
     // ReadAnyGroup _inputGroup{};
     std::shared_ptr<Motor> _motor;

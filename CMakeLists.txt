@@ -5,7 +5,7 @@ include(GNUInstallDirs)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 00)
 set(${PROJECT_NAME}_MINOR_VERSION 08)
-set(${PROJECT_NAME}_PATCH_VERSION 01)
+set(${PROJECT_NAME}_PATCH_VERSION 02)
 include(cmake/set_version_numbers.cmake)
 
 find_package(ChimeraTK-ApplicationCore 01.00 REQUIRED)
@@ -18,7 +18,7 @@ include(cmake/enable_doxygen_documentation.cmake)
 
 
 # The shared library
-set(SRC StepperMotorModule.cc StepperMotorCtrl.cc StepperMotorReadback.cc)
+set(SRC StepperMotorModule.cc StepperMotorCtrl.cc StepperMotorReadback.cc StatusModule.cc)
 foreach(SOURCE ${SRC})
     set(LIBRARY_SOURCES ${LIBRARY_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/src/${SOURCE})
 endforeach()
