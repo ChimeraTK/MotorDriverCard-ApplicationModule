@@ -14,8 +14,8 @@ void ChimeraTK::StatusModule::mainLoop() {
   TransferElementID id{};
   do {
     if(!id.isValid() || id == messageIn.getId()) {
-      message.writeIfDifferent(std::string(messageIn));
-      hasMessage.writeIfDifferent(!std::string(message).empty());
+      message.setAndWrite(std::string(messageIn));
+      hasMessage.setAndWrite(!std::string(message).empty());
     }
 
     if(!id.isValid() || id == motorStateIn.getId()) {

@@ -260,7 +260,7 @@ namespace ChimeraTK::MotorDriver {
         if(changedVarId == deviceBecameFunctional.getId()) {
           writeRecoveryValues();
           // Flush state of notifications
-          message.write();
+          message.setAndWrite("");
 
           continue;
         }
@@ -269,7 +269,6 @@ namespace ChimeraTK::MotorDriver {
         // read it out and publish any changes
         if(changedVarId == trigger.getId() && _motor->isOpen()) {
           motorState.writeIfDifferent(_motor->get()->getState());
-          message.writeIfDifferent(message);
           continue;
         }
 
@@ -289,7 +288,7 @@ namespace ChimeraTK::MotorDriver {
         dummySignals.dummyMotorStop.writeIfDifferent(control.stop || control.emergencyStop);
         dummySignals.dummyMotorTrigger++;
         dummySignals.dummyMotorTrigger.write();
-        message.writeIfDifferent(notificationMessage);
+        message.setAndWrite(notificationMessage);
       }
       catch(ChimeraTK::runtime_error& e) {
         // Comes from the state readout. Do nothing here. either it was a single glitch
