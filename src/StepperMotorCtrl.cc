@@ -136,7 +136,6 @@ namespace ChimeraTK::MotorDriver {
       if(code != ExitStatus::SUCCESS) {
         return "Could not set axis translation: " + ChimeraTK::MotorDriver::toString(code);
       }
-
       return std::string();
     });
     addMapping(referenceSettings.axisTranslation, ::detail::SKIP_ON_RECOVERY, [this] {
@@ -235,7 +234,7 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ControlInputHandler::mainLoop() {
-    auto inputGroup = this->readAnyGroup();
+    auto inputGroup = readAnyGroup();
 
     // before anything else, wait for the deviceBecameFunctional trigger
     // then flush out all values that are written during recovery
@@ -276,7 +275,7 @@ namespace ChimeraTK::MotorDriver {
           notificationMessage = "Motor device is in recovery, not doing control step";
         }
         else {
-          // FIXME Keep this only as long as we rely on the dummy for tests
+          // FIXME Keep this try/catch only as long as we rely on the dummy for tests
           try {
             notificationMessage = std::get<2>(_funcMap.at(changedVarId))();
           }
