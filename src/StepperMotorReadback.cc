@@ -74,9 +74,8 @@ namespace ChimeraTK::MotorDriver {
 
   ReadbackHandler::ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
       const std::string& description, const std::string& triggerPath, DeviceModule* deviceModule)
-  : ApplicationModule::ApplicationModule(owner, name, description), trigger{this, triggerPath,
-                                                                        "Trigger to initiate read-out from HW",
-                                                                        std::unordered_set<std::string>{"MOT_TRIG"}},
+  : ApplicationModule::ApplicationModule(owner, name, description),
+    trigger{this, triggerPath, "Trigger to initiate read-out from HW", std::unordered_set<std::string>{"MOT_TRIG"}},
     _motor{std::move(motor)}, _motorIsDummy{false}, _deviceModule{deviceModule} {
     deviceBecameFunctional =
         VoidInput(this, deviceModule->getDeviceManager().deviceBecameFunctional.getModel().getFullyQualifiedPath(), "");
