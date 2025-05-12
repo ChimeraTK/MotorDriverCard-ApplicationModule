@@ -17,8 +17,8 @@ namespace ChimeraTK::MotorDriver {
 
   ControlInputHandler::ControlInputHandler(ModuleGroup* owner, const std::string& name, const std::string& description,
       std::shared_ptr<Motor> motor, const std::string& triggerPath, DeviceModule* deviceModule)
-  : ApplicationModule(owner, name, description), trigger{this, triggerPath, "Trigger to initiate read-out from HW",
-                                                     std::unordered_set<std::string>{"MOT_TRIG"}},
+  : ApplicationModule(owner, name, description),
+    trigger{this, triggerPath, "Trigger to initiate read-out from HW", std::unordered_set<std::string>{"MOT_TRIG"}},
     _motor(std::move(motor)) {
     // If motor has HW reference switches,
     // calibration is supported
