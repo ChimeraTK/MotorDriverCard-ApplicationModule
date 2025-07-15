@@ -104,9 +104,9 @@ namespace ChimeraTK::MotorDriver {
     ReadbackHandler(std::shared_ptr<Motor> motor, ModuleGroup* owner, const std::string& name,
         const std::string& description, const std::string& triggerPath, DeviceModule* deviceModule);
 
-    VoidInput trigger{};
-    VoidInput deviceBecameFunctional{};
-    ScalarPollInput<int32_t> deviceStatus{};
+    VoidInput trigger;
+    VoidInput deviceBecameFunctional;
+    ScalarPollInput<int32_t> deviceStatus;
 
     // Diagnostics
     ScalarOutput<float> actualCycleTime{
@@ -126,13 +126,13 @@ namespace ChimeraTK::MotorDriver {
     void prepare() override;
     void mainLoop() override;
 
-    Position position{this, "position", "Position data", {"MOTOR"}};
-    Limit speedLimit{this, "speedLimit", "Speed data", {"MOTOR"}};
-    Limit currentLimit{this, "currentLimit", "Current data", {"MOTOR"}};
-    MotorStatus status{this, "status", "Status data of the motor driver", {"MOTOR"}};
-    SoftwareLimitStat swLimits{this, "swLimits", "Status data of SW limits", {"MOTOR"}};
-    ReferenceSwitch positiveEndSwitch{this, "positiveEndSwitch", "Data of the positive end switch", {"MOTOR"}};
-    ReferenceSwitch negativeEndSwitch{this, "negativeEndSwitch", "Data of the negative end switch", {"MOTOR"}};
+    Position position{this, "Position", "Position data", {"MOTOR"}};
+    Limit speedLimit{this, "SpeedLimit", "Speed data", {"MOTOR"}};
+    Limit currentLimit{this, "CurrentLimit", "Current data", {"MOTOR"}};
+    MotorStatus status{this, "Status", "Status data of the motor driver", {"MOTOR"}};
+    SoftwareLimitStat swLimits{this, "SwLimits", "Status data of SW limits", {"MOTOR"}};
+    ReferenceSwitch positiveEndSwitch{this, "PositiveEndSwitch", "Data of the positive end switch", {"MOTOR"}};
+    ReferenceSwitch negativeEndSwitch{this, "NegativeEndSwitch", "Data of the negative end switch", {"MOTOR"}};
 
    protected:
     std::function<void(void)> _readbackFunction;

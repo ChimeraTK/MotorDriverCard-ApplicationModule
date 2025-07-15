@@ -27,7 +27,7 @@ constexpr auto STEPPER_MOTOR_DEVICE_CONFIG_FILE = "VT21-MotorDriverCardConfig.xm
 struct TestServer : public ctk::Application {
   TestServer() : ctk::Application("MotorDriverCard_ApplicationModule_TestServer") {
     motor =
-        std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters, "/Motor/readback/tick");
+        std::make_unique<ctk::MotorDriver::StepperMotorModule>(this, "Motor", "", parameters, "/Motor/Readback/tick");
   }
   ~TestServer() override { shutdown(); }
 
@@ -80,8 +80,8 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
-  auto trigger = testFacility.getVoid("/Motor/readback/tick");
-  auto motorState = testFacility.getScalar<std::string>("/Motor/readback/status/state");
+  auto trigger = testFacility.getVoid("/Motor/Readback/tick");
+  auto motorState = testFacility.getScalar<std::string>("/Motor/Readback/Status/state");
 
   // Enable the dummy motor
   // FIXME: If the dummy is enabled here or not does not make a difference. The test still passes. Check the test code.
@@ -100,29 +100,29 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   // Directly check. Initial values are already received.
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "disabled");
 
-  testFacility.writeScalar<int>("Motor/controlInput/referenceSettings/positionInSteps", 0);
+  testFacility.writeScalar<int>("Motor/ControlInput/ReferenceSettings/positionInSteps", 0);
   testFacility.stepApplication();
 
   // Enable stepper motor and set a reference position
   // (the latter should yield ChimeraTK::MotorDriver::CalibrationMode::SIMPLE)
-  testFacility.writeScalar<int>("Motor/controlInput/control/enable", 1);
+  testFacility.getVoid("Motor/ControlInput/Control/enable").write();
   testFacility.stepApplication();
   motorState.read();
 
-  testFacility.writeScalar<int>("Motor/controlInput/control/enableAutostart", 1);
+  testFacility.writeScalar<ChimeraTK::Boolean>("Motor/ControlInput/Control/enableAutostart", true);
   testFacility.stepApplication();
   trigger.write();
   testFacility.stepApplication();
 
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/autostartEnabled"), 1);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/Readback/Status/autostartEnabled"), 1);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "idle");
-  BOOST_CHECK_EQUAL(testFacility.readScalar<ChimeraTK::Boolean>("Motor/controlInput/notification/hasMessage"), false);
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
+  BOOST_CHECK_EQUAL(testFacility.readScalar<ChimeraTK::Boolean>("Motor/ControlInput/Notification/hasMessage"), false);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/Readback/Status/calibrationMode"),
       static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::SIMPLE));
 
   // Apply a position setpoint
   int targetPosition{1000};
-  testFacility.writeScalar<int>("Motor/controlInput/positionSetpoint/positionInSteps", targetPosition);
+  testFacility.writeScalar<int>("Motor/ControlInput/PositionSetpoint/positionInSteps", targetPosition);
 
   testFacility.stepApplication();
   trigger.write();
@@ -130,8 +130,8 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   motorState.read();
 
   // Target value should have been applied and module transitioned ito state "moving"
-  BOOST_CHECK_EQUAL(testFacility.readScalar<ChimeraTK::Boolean>("Motor/controlInput/notification/hasMessage"), false);
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/position/targetValueInSteps"), targetPosition);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<ChimeraTK::Boolean>("Motor/ControlInput/Notification/hasMessage"), false);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/Readback/Position/targetValueInSteps"), targetPosition);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "moving");
 
   // Move the dummy
@@ -146,7 +146,7 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
   testFacility.stepApplication();
   motorState.readNonBlocking();
 
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/position/actualValueInSteps"), targetPosition);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/Readback/Position/actualValueInSteps"), targetPosition);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "idle");
 }
 
@@ -167,8 +167,8 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
   ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
-  auto trigger = testFacility.getVoid("Motor/readback/tick");
-  auto motorState = testFacility.getScalar<std::string>("Motor/readback/status/state");
+  auto trigger = testFacility.getVoid("Motor/Readback/tick");
+  auto motorState = testFacility.getScalar<std::string>("Motor/Readback/Status/state");
 
   BOOST_CHECK(motorState.dataValidity() == ctk::DataValidity::ok);
 
@@ -181,7 +181,7 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
   testFacility.stepApplication();
 
   // Application should start with disabled motor
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/Readback/Status/calibrationMode"),
       static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::SIMPLE));
 }
 
@@ -200,15 +200,15 @@ BOOST_FIXTURE_TEST_CASE(testStartup, TestFixture) {
   ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
-  auto trigger = testFacility.getVoid("Motor/readback/tick");
-  auto motorState = testFacility.getScalar<std::string>("Motor/readback/status/state");
+  auto trigger = testFacility.getVoid("Motor/Readback/tick");
+  auto motorState = testFacility.getScalar<std::string>("Motor/Readback/Status/state");
 
   trigger.write();
   testFacility.stepApplication();
   motorState.read();
 
   // Application should start with disabled motor
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/Readback/Status/calibrationMode"),
       static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::FULL));
 }
 
@@ -224,9 +224,9 @@ BOOST_FIXTURE_TEST_CASE(testFullStepping, TestFixture) {
   ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
-  auto trigger = testFacility.getVoid("/Motor/readback/tick");
-  auto motorState = testFacility.getScalar<std::string>("/Motor/readback/status/state");
-  auto message = testFacility.getScalar<std::string>("/Motor/controlInput/notification/message");
+  auto trigger = testFacility.getVoid("/Motor/Readback/tick");
+  auto motorState = testFacility.getScalar<std::string>("/Motor/Readback/Status/state");
+  auto message = testFacility.getScalar<std::string>("/Motor/ControlInput/Notification/message");
 
   trigger.write();
   testFacility.stepApplication();
@@ -236,16 +236,16 @@ BOOST_FIXTURE_TEST_CASE(testFullStepping, TestFixture) {
   message.readLatest();
 
   // Make sure we are some kind of calibrated
-  BOOST_TEST(testFacility.readScalar<int>("Motor/readback/status/calibrationMode") !=
+  BOOST_TEST(testFacility.readScalar<int>("Motor/Readback/Status/calibrationMode") !=
       static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::NONE));
 
   // Enable Fullstepping
-  testFacility.writeScalar<int>("/Motor/controlInput/control/enableFullStepping", 1);
+  testFacility.writeScalar<ChimeraTK::Boolean>("/Motor/ControlInput/Control/enableFullStepping", true);
   testFacility.stepApplication();
 
   // Enable the motor and autostart
-  testFacility.writeScalar<int>("Motor/controlInput/control/enable", 1);
-  testFacility.writeScalar<int>("Motor/controlInput/control/enableAutostart", 1);
+  testFacility.getVoid("Motor/ControlInput/Control/enable").write();
+  testFacility.writeScalar<ChimeraTK::Boolean>("Motor/ControlInput/Control/enableAutostart", true);
 
   testFacility.stepApplication();
 
@@ -263,7 +263,7 @@ BOOST_FIXTURE_TEST_CASE(testFullStepping, TestFixture) {
   message.readLatest();
 
   int targetPosition{23};
-  testFacility.writeScalar<int>("Motor/controlInput/positionSetpoint/positionInSteps", targetPosition);
+  testFacility.writeScalar<int>("Motor/ControlInput/PositionSetpoint/positionInSteps", targetPosition);
   testFacility.stepApplication();
 
   BOOST_CHECK(message.readNonBlocking() == true);
@@ -285,8 +285,8 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
   ChimeraTK::TestFacility testFacility{testServer};
   testFacility.runApplication();
 
-  auto trigger = testFacility.getVoid("/Motor/readback/tick");
-  auto motorState = testFacility.getScalar<std::string>("/Motor/readback/status/state");
+  auto trigger = testFacility.getVoid("/Motor/Readback/tick");
+  auto motorState = testFacility.getScalar<std::string>("/Motor/Readback/Status/state");
 
   // Enable the dummy motor
   // FIXME: If the dummy is enabled here or not does not make a difference. The test still passes. Check the test code.
@@ -317,18 +317,18 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
 
   // Enable stepper motor and set a reference position
   // (the latter should yield ChimeraTK::MotorDriver::CalibrationMode::SIMPLE)
-  testFacility.writeScalar<int>("Motor/controlInput/control/enable", 1);
-  testFacility.writeScalar<int>("Motor/controlInput/control/enableAutostart", 1);
+  testFacility.getVoid("Motor/ControlInput/Control/enable").write();
+  testFacility.writeScalar<ChimeraTK::Boolean>("Motor/ControlInput/Control/enableAutostart", true);
   testFacility.stepApplication();
   motorState.readLatest();
   trigger.write();
   testFacility.stepApplication();
 
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/autostartEnabled"), 1);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/Readback/Status/autostartEnabled"), 1);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "idle");
-  BOOST_CHECK_EQUAL(testFacility.readScalar<ChimeraTK::Boolean>("Motor/controlInput/notification/hasMessage"), false);
+  BOOST_CHECK_EQUAL(testFacility.readScalar<ChimeraTK::Boolean>("Motor/ControlInput/Notification/hasMessage"), false);
 
-  testFacility.writeScalar<int>("Motor/controlInput/control/calibrate", 1);
+  testFacility.getVoid("Motor/ControlInput/Control/calibrate").write();
   testFacility.stepApplication();
   trigger.write();
   testFacility.stepApplication();
@@ -348,7 +348,7 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
     trigger.write();
     if(i == 50) {
       std::cout << "Performing emergency stop" << std::endl;
-      testFacility.writeScalar<int>("Motor/controlInput/control/emergencyStop", 1);
+      testFacility.getVoid("Motor/ControlInput/Control/emergencyStop").write();
     }
     testFacility.stepApplication();
     i++;
@@ -356,6 +356,6 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
 
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "error");
 
-  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
+  BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/Readback/Status/calibrationMode"),
       static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::NONE));
 }

@@ -12,16 +12,14 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <utility>
 
 namespace ChimeraTK::MotorDriver {
   /// Calibration related inputs, only available for motors with HW end reference switches
   struct CalibrationCommands : public VariableGroup {
     using VariableGroup::VariableGroup;
 
-    ScalarPushInput<int32_t> calibrateMotor{this, "calibrate", "", "Calibrates the motor"};
-    ScalarPushInput<int32_t> determineTolerance{
-        this, "determineTolerance", "", "Determines tolerance of the end switch positions"};
+    VoidInput calibrateMotor{this, "calibrate", "Calibrates the motor"};
+    VoidInput determineTolerance{this, "determineTolerance", "Determines tolerance of the end switch positions"};
   };
 
   /********************************************************************************************************************/
@@ -30,19 +28,20 @@ namespace ChimeraTK::MotorDriver {
   struct MotorControl : public VariableGroup {
     using VariableGroup::VariableGroup;
 
-    ScalarPushInput<int> enable{this, "enable", "", "Enable the motor"};
-    ScalarPushInput<int> disable{this, "disable", "", "Disable the motor"};
-    ScalarPushInput<int> start{this, "start", "", "Start the motor"};
+    VoidInput enable{this, "enable", "Enable the motor"};
+    VoidInput disable{this, "disable", "Disable the motor"};
+    VoidInput start{this, "start", "Start the motor"};
 
     CalibrationCommands calibrationCtrl{};
 
-    ScalarPushInput<int> stop{this, "stop", "", "Stop the motor"};
-    ScalarPushInput<int> emergencyStop{this, "emergencyStop", "", "Emergency stop motor"};
-    ScalarPushInput<int> resetError{this, "resetError", "", "Reset error state"};
+    VoidInput stop{this, "stop", "Stop the motor"};
+    VoidInput emergencyStop{this, "emergencyStop", "Emergency stop motor"};
+    VoidInput resetError{this, "resetError", "Reset error state"};
 
-    ScalarPushInput<int> enableFullStepping{this, "enableFullStepping", "",
+    ScalarPushInput<ChimeraTK::Boolean> enableFullStepping{this, "enableFullStepping", "",
         "Enables full-stepping mode of the motor driver, i.e., it will only stop on full steps"};
-    ScalarPushInput<int> enableAutostart{this, "enableAutostart", "", "Sets the autostart flag of the motor driver"};
+    ScalarPushInput<ChimeraTK::Boolean> enableAutostart{
+        this, "enableAutostart", "", "Sets the autostart flag of the motor driver"};
   };
 
   /********************************************************************************************************************/
@@ -86,7 +85,7 @@ namespace ChimeraTK::MotorDriver {
   struct SoftwareLimitCtrl : public VariableGroup {
     using VariableGroup::VariableGroup;
 
-    ScalarPushInput<int> enable{this, "enable", "", "Enable SW limits"};
+    ScalarPushInput<ChimeraTK::Boolean> enable{this, "enable", "", "Enable SW limits"};
     ScalarPushInput<float> maxPosition{this, "maxPosition", "", "Positive SW position limit"};
     ScalarPushInput<float> minPosition{this, "minPosition", "", "Negative SW position limit"};
     ScalarPushInput<int> maxPositionInSteps{this, "maxPositionInSteps", "", "Positive SW position limit"};
@@ -109,9 +108,12 @@ namespace ChimeraTK::MotorDriver {
   struct DummySignals : public VariableGroup {
     using VariableGroup::VariableGroup;
 
-    ScalarOutput<int32_t> dummyMotorTrigger{
-        this, "dummyMotorTrigger", "", "Triggers the dummy motor module after writing to a control input"};
-    ScalarOutput<int32_t> dummyMotorStop{this, "dummyMotorStop", "", "Stops the dummy motor"};
+    bool dummyMustStop{false};
+    VoidOutput dummyMotorTrigger{
+        this, "dummyMotorTrigger", "Triggers the dummy motor module after writing to a control input"};
+    VoidOutput dummyMotorStop{this, "dummyMotorStop", "Stops the dummy motor"};
+
+    void update();
   };
 
   /********************************************************************************************************************/
@@ -146,13 +148,13 @@ namespace ChimeraTK::MotorDriver {
     VoidInput deviceBecameFunctional;
     VoidInput trigger;
 
-    MotorControl control{this, "control", "Control words of the motor", {"MOTOR"}};
-    PositionSetpoint positionSetpoint{this, "positionSetpoint", "Position setpoints", {"MOTOR"}};
-    UserLimits userLimits{this, "userLimits", "User-definable limits", {"MOTOR"}};
-    SoftwareLimitCtrl swLimits{this, "swLimits", "Control data of SW limits", {"MOTOR"}};
+    MotorControl control{this, "Control", "Control words of the motor", {"MOTOR"}};
+    PositionSetpoint positionSetpoint{this, "PositionSetpoint", "Position setpoints", {"MOTOR"}};
+    UserLimits userLimits{this, "UserLimits", "User-definable limits", {"MOTOR"}};
+    SoftwareLimitCtrl swLimits{this, "SwLimits", "Control data of SW limits", {"MOTOR"}};
     ReferenceSettings referenceSettings{
-        this, "referenceSettings", "Settings to define the position reference", {"MOTOR"}};
-    DummySignals dummySignals{this, "dummySignals", " Signals triggering the dummy motor", {"DUMMY"}};
+        this, "ReferenceSettings", "Settings to define the position reference", {"MOTOR"}};
+    DummySignals dummySignals{this, "DummySignals", " Signals triggering the dummy motor", {"DUMMY"}};
     // CalibrationCommands _calibrationCommands;
     ScalarOutput<std::string> message{
         this, "../StatusPropagator/message", "n/a", "Message for user notification from ControlInput module"};

@@ -41,24 +41,22 @@ namespace ChimeraTK::MotorDriver {
     addMapping(control.disable, ::detail::SKIP_ON_RECOVERY, [this] { return disableCallback(); });
     addMapping(control.start, ::detail::SKIP_ON_RECOVERY, [this] { return startCallback(); });
     addMapping(control.stop, ::detail::SKIP_ON_RECOVERY, [this] {
-      if(control.stop) {
-        _motor->get()->stop();
-        motorState.writeIfDifferent(_motor->get()->getState());
-      }
+      dummySignals.dummyMustStop = true;
+      _motor->get()->stop();
+      motorState.writeIfDifferent(_motor->get()->getState());
       return "";
     });
+
     addMapping(control.emergencyStop, ::detail::SKIP_ON_RECOVERY, [this] {
-      if(control.emergencyStop) {
-        _motor->get()->emergencyStop();
-        motorState.writeIfDifferent(_motor->get()->getState());
-      }
+      dummySignals.dummyMustStop = true;
+      _motor->get()->emergencyStop();
+      motorState.writeIfDifferent(_motor->get()->getState());
       return "";
     });
+
     addMapping(control.resetError, ::detail::SKIP_ON_RECOVERY, [this] {
-      if(control.resetError) {
-        _motor->get()->resetError();
-        motorState.writeIfDifferent(_motor->get()->getState());
-      }
+      _motor->get()->resetError();
+      motorState.writeIfDifferent(_motor->get()->getState());
 
       return "";
     });
@@ -285,9 +283,7 @@ namespace ChimeraTK::MotorDriver {
           }
         }
 
-        dummySignals.dummyMotorStop.writeIfDifferent(control.stop || control.emergencyStop);
-        dummySignals.dummyMotorTrigger++;
-        dummySignals.dummyMotorTrigger.write();
+        dummySignals.update();
         message.setAndWrite(notificationMessage);
       }
       catch(ChimeraTK::runtime_error& e) {
@@ -300,20 +296,16 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   std::string ControlInputHandler::enableCallback() {
-    if(control.enable) {
-      _motor->get()->setEnabled(true);
-      motorState.writeIfDifferent(_motor->get()->getState());
-    }
+    _motor->get()->setEnabled(true);
+    motorState.writeIfDifferent(_motor->get()->getState());
     return "";
   }
 
   /********************************************************************************************************************/
 
   std::string ControlInputHandler::disableCallback() {
-    if(control.disable) {
-      _motor->get()->setEnabled(false);
-      motorState.writeIfDifferent(_motor->get()->getState());
-    }
+    _motor->get()->setEnabled(false);
+    motorState.writeIfDifferent(_motor->get()->getState());
 
     return {};
   }
@@ -321,14 +313,12 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   std::string ControlInputHandler::startCallback() {
-    if(control.start) {
-      if(_motor->get()->isSystemIdle()) {
-        _motor->get()->start();
-        motorState.writeIfDifferent(_motor->get()->getState());
-      }
-      else {
-        return "WARNING: Called startMotor while motor is not in IDLE state.";
-      }
+    if(_motor->get()->isSystemIdle()) {
+      _motor->get()->start();
+      motorState.writeIfDifferent(_motor->get()->getState());
+    }
+    else {
+      return "WARNING: Called startMotor while motor is not in IDLE state.";
     }
 
     return {};
@@ -350,16 +340,14 @@ namespace ChimeraTK::MotorDriver {
       return {};
     }
 
-    if(control.calibrationCtrl.calibrateMotor) {
-      if(_motor->get()->isSystemIdle()) {
-        auto code = _motor->get()->calibrate();
-        if(code != ExitStatus::SUCCESS) {
-          return "Could not calibrate motor: " + ChimeraTK::MotorDriver::toString(code);
-        }
+    if(_motor->get()->isSystemIdle()) {
+      auto code = _motor->get()->calibrate();
+      if(code != ExitStatus::SUCCESS) {
+        return "Could not calibrate motor: " + ChimeraTK::MotorDriver::toString(code);
       }
-      else {
-        return "WARNING: Called calibrateMotor while motor is not in IDLE state.";
-      }
+    }
+    else {
+      return "WARNING: Called calibrateMotor while motor is not in IDLE state.";
     }
 
     return {};
@@ -372,17 +360,27 @@ namespace ChimeraTK::MotorDriver {
       return "";
     }
 
-    if(control.calibrationCtrl.determineTolerance) {
-      if(_motor->get()->isSystemIdle()) {
-        auto code = _motor->get()->determineTolerance();
-        if(code != ExitStatus::SUCCESS) {
-          return "Could not determine endswitch tolerance: " + ChimeraTK::MotorDriver::toString(code);
-        }
-      }
-      else {
-        return "WARNING: Called determineTolerance while motor is not in IDLE state.";
+    if(_motor->get()->isSystemIdle()) {
+      auto code = _motor->get()->determineTolerance();
+      if(code != ExitStatus::SUCCESS) {
+        return "Could not determine endswitch tolerance: " + ChimeraTK::MotorDriver::toString(code);
       }
     }
+    else {
+      return "WARNING: Called determineTolerance while motor is not in IDLE state.";
+    }
     return "";
+  }
+
+  /********************************************************************************************************************/
+  /********************************************************************************************************************/
+  /********************************************************************************************************************/
+
+  void DummySignals::update() {
+    if(dummyMustStop) {
+      dummyMotorStop.write();
+    }
+    dummyMustStop = false;
+    dummyMotorTrigger.write();
   }
 } // namespace ChimeraTK::MotorDriver

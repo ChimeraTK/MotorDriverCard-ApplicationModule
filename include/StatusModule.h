@@ -11,9 +11,9 @@ namespace ChimeraTK {
   struct StatusModule : public ApplicationModule {
     explicit StatusModule(ModuleGroup* owner);
 
-    ScalarOutput<std::string> message{this, "../controlInput/notification/message", "n/a", "", {"MOTOR"}};
-    ScalarOutput<Boolean> hasMessage{this, "../controlInput/notification/hasMessage", "n/a", "", {"MOTOR"}};
-    ScalarOutput<std::string> motorState{this, "../readback/status/state", "n/a", "", {"MOTOR"}};
+    ScalarOutput<std::string> message{this, "../ControlInput/Notification/message", "n/a", "", {"MOTOR"}};
+    ScalarOutput<Boolean> hasMessage{this, "../ControlInput/Notification/hasMessage", "n/a", "", {"MOTOR"}};
+    ScalarOutput<std::string> motorState{this, "../Readback/Status/state", "n/a", "", {"MOTOR"}};
 
     ScalarPushInput<std::string> messageIn{this, "message", "n/a", ""};
     ScalarPushInput<std::string> motorStateIn{this, "motorState", "n/a", ""};
