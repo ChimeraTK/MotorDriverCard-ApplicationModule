@@ -139,12 +139,12 @@ namespace ChimeraTK::MotorDriver {
      * the changed PV to the library by the ID returned from readAny().
      */
     using FunctionMapEntry = std::tuple<bool, std::string, std::function<std::string(void)>>;
-    std::map<TransferElementID, FunctionMapEntry> _funcMap{};
+    std::map<TransferElementID, FunctionMapEntry> _funcMap;
     void addMapping(
         TransferElementAbstractor& element, bool writeOnRecovery, const std::function<std::string(void)>& func);
 
     VoidInput deviceBecameFunctional;
-    VoidInput trigger{};
+    VoidInput trigger;
 
     MotorControl control{this, "control", "Control words of the motor", {"MOTOR"}};
     PositionSetpoint positionSetpoint{this, "positionSetpoint", "Position setpoints", {"MOTOR"}};

@@ -81,6 +81,7 @@ namespace ChimeraTK::MotorDriver {
 
       return std::string();
     });
+
     addMapping(positionSetpoint.position, ::detail::SKIP_ON_RECOVERY, [this] {
       auto code = _motor->get()->setTargetPosition(positionSetpoint.position);
       motorState.writeIfDifferent(_motor->get()->getState());
