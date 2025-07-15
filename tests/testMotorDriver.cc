@@ -20,8 +20,8 @@
 
 namespace ctk = ChimeraTK;
 
-constexpr char STEPPER_MOTOR_DEVICE_NAME[] = "STEPPER-MOTOR-DUMMY";
-constexpr char STEPPER_MOTOR_DEVICE_CONFIG_FILE[] = "VT21-MotorDriverCardConfig.xml";
+constexpr auto STEPPER_MOTOR_DEVICE_NAME = "STEPPER-MOTOR-DUMMY";
+constexpr auto STEPPER_MOTOR_DEVICE_CONFIG_FILE = "VT21-MotorDriverCardConfig.xml";
 
 // Test server
 struct TestServer : public ctk::Application {
@@ -54,6 +54,15 @@ struct TestFixture {
         STEPPER_MOTOR_DEVICE_NAME, {}, STEPPER_MOTOR_DEVICE_CONFIG_FILE);
     _motorControlerDummy =
         boost::dynamic_pointer_cast<mtca4u::MotorControlerDummy>(_motorDriverCard->getMotorControler(0));
+    _motorControlerDummy->resetInternalStateToDefaults();
+  }
+
+  void calibrateFull(uint32_t calibrationTime = 123456U, int negativeReference = -1000, int positiveReference = 1000) {
+    // Set the calibration time to a nonzero value and proper end switch positions
+    // -> Motor instance should be initialized with CalibrationMode::SIMPLE
+    _motorControlerDummy->setCalibrationTime(calibrationTime);
+    _motorControlerDummy->setPositiveReferenceSwitchCalibration(positiveReference);
+    _motorControlerDummy->setNegativeReferenceSwitchCalibration(negativeReference);
   }
 
   boost::shared_ptr<mtca4u::MotorDriverCard> _motorDriverCard;
@@ -131,7 +140,11 @@ BOOST_FIXTURE_TEST_CASE(testMoving, TestFixture) {
 
   trigger.write();
   testFacility.stepApplication();
-  motorState.read();
+  motorState.readNonBlocking();
+
+  trigger.write();
+  testFacility.stepApplication();
+  motorState.readNonBlocking();
 
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/position/actualValueInSteps"), targetPosition);
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "idle");
@@ -146,9 +159,9 @@ BOOST_FIXTURE_TEST_CASE(testStartupWithSimpleCalibration, TestFixture) {
   _motorControlerDummy->setEnabled(true);
   _motorControlerDummy->setMotorCurrentEnabled(true);
 
-  // Set the calibration time to a nonzero value
+  // Set the calibration time to a nonzero value, limits min/max
   // -> Motor instance should be initialized with CalibrationMode::SIMPLE
-  _motorControlerDummy->setCalibrationTime(123456U);
+  calibrateFull(123456U, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
 
   TestServer testServer;
   ChimeraTK::TestFacility testFacility{testServer};
@@ -180,10 +193,8 @@ BOOST_FIXTURE_TEST_CASE(testStartup, TestFixture) {
   _motorControlerDummy->setMotorCurrentEnabled(true);
 
   // Set the calibration time to a nonzero value and proper end switch positions
-  // -> Motor instance should be initialized with CalibrationMode::SIMPLE
-  _motorControlerDummy->setCalibrationTime(123456U);
-  _motorControlerDummy->setPositiveReferenceSwitchCalibration(1000);
-  _motorControlerDummy->setNegativeReferenceSwitchCalibration(-1000);
+  // -> Motor instance should be initialized with CalibrationMode::FULL
+  calibrateFull();
 
   TestServer testServer;
   ChimeraTK::TestFacility testFacility{testServer};
@@ -199,6 +210,72 @@ BOOST_FIXTURE_TEST_CASE(testStartup, TestFixture) {
   // Application should start with disabled motor
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
       static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::FULL));
+}
+
+BOOST_FIXTURE_TEST_CASE(testFullStepping, TestFixture) {
+  std::cout << "testFullStepping" << std::endl;
+
+  _motorControlerDummy->setEnabled(true);
+  _motorControlerDummy->setMotorCurrentEnabled(true);
+
+  calibrateFull(123456U);
+
+  TestServer testServer;
+  ChimeraTK::TestFacility testFacility{testServer};
+  testFacility.runApplication();
+
+  auto trigger = testFacility.getVoid("/Motor/readback/tick");
+  auto motorState = testFacility.getScalar<std::string>("/Motor/readback/status/state");
+  auto message = testFacility.getScalar<std::string>("/Motor/controlInput/notification/message");
+
+  trigger.write();
+  testFacility.stepApplication();
+
+  // Throw away any messages and state changes until now
+  motorState.readLatest();
+  message.readLatest();
+
+  // Make sure we are some kind of calibrated
+  BOOST_TEST(testFacility.readScalar<int>("Motor/readback/status/calibrationMode") !=
+      static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::NONE));
+
+  // Enable Fullstepping
+  testFacility.writeScalar<int>("/Motor/controlInput/control/enableFullStepping", 1);
+  testFacility.stepApplication();
+
+  // Enable the motor and autostart
+  testFacility.writeScalar<int>("Motor/controlInput/control/enable", 1);
+  testFacility.writeScalar<int>("Motor/controlInput/control/enableAutostart", 1);
+
+  testFacility.stepApplication();
+
+  trigger.write();
+  testFacility.stepApplication();
+
+  BOOST_CHECK(motorState.readNonBlocking() == true);
+  BOOST_TEST(std::string(motorState) == "idle");
+
+  trigger.write();
+  testFacility.stepApplication();
+
+  BOOST_CHECK(motorState.readNonBlocking() == false);
+  BOOST_TEST(std::string(motorState) == "idle");
+  message.readLatest();
+
+  int targetPosition{23};
+  testFacility.writeScalar<int>("Motor/controlInput/positionSetpoint/positionInSteps", targetPosition);
+  testFacility.stepApplication();
+
+  BOOST_CHECK(message.readNonBlocking() == true);
+  BOOST_TEST(std::string(message) == "");
+  BOOST_CHECK(motorState.readNonBlocking() == true);
+  BOOST_TEST(std::string(motorState) == "moving");
+
+  trigger.write();
+  testFacility.stepApplication();
+
+  BOOST_CHECK(motorState.readNonBlocking() == true);
+  BOOST_CHECK(std::string(motorState) == "idle");
 }
 
 BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
@@ -217,9 +294,7 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
   _motorControlerDummy->setMotorCurrentEnabled(true);
 
   // Remove all calibration on the controller
-  _motorControlerDummy->setCalibrationTime(0);
-  _motorControlerDummy->setPositiveReferenceSwitchCalibration(std::numeric_limits<int>::max());
-  _motorControlerDummy->setNegativeReferenceSwitchCalibration(std::numeric_limits<int>::min());
+  calibrateFull(0, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
 
   // This is used to make the move below stop before the endswitch
   // The default end switch position in the dummy is at +/-10000
@@ -257,6 +332,8 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
   testFacility.stepApplication();
   trigger.write();
   testFacility.stepApplication();
+  trigger.write();
+  testFacility.stepApplication();
   motorState.read();
 
   // Move the dummy
@@ -278,6 +355,7 @@ BOOST_FIXTURE_TEST_CASE(testCalibrationEmergencyStop, TestFixture) {
   } while(!motorState.readNonBlocking() && (std::string)motorState == std::string{"calibrating"});
 
   BOOST_CHECK_EQUAL(static_cast<std::string>(motorState), "error");
+
   BOOST_CHECK_EQUAL(testFacility.readScalar<int>("Motor/readback/status/calibrationMode"),
       static_cast<int>(ChimeraTK::MotorDriver::CalibrationMode::NONE));
 }
