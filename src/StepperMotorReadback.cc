@@ -196,6 +196,12 @@ namespace ChimeraTK::MotorDriver {
       moduleError.setCurrentVersionNumber({});
       _spiErrorCounter = 0;
     }
+    catch(ChimeraTK::logic_error& e) {
+      if(std::string(moduleError.message) != e.what()) {
+        setStatusFromException(e);
+      }
+      _deviceModule->reportException(e.what());
+    }
     catch(ChimeraTK::runtime_error& e) {
       if(std::string(moduleError.message) != e.what()) {
         setStatusFromException(e);
@@ -238,6 +244,19 @@ namespace ChimeraTK::MotorDriver {
       _spiErrorCounter = 0;
     }
     catch(ChimeraTK::runtime_error& e) {
+      if(_spiErrorCounter > SPI_RETRY_COUNT) {
+        _motor->close();
+        setStatusFromException(e);
+        _deviceModule->reportException(e.what());
+
+        // Reset counter so that there is a longer period in trying to read after re-open
+        _spiErrorCounter = 0;
+      }
+      else {
+        _spiErrorCounter++;
+      }
+    }
+    catch(ChimeraTK::logic_error& e) {
       if(_spiErrorCounter > SPI_RETRY_COUNT) {
         _motor->close();
         setStatusFromException(e);
