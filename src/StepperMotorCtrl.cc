@@ -289,7 +289,7 @@ namespace ChimeraTK::MotorDriver {
         dummySignals.dummyMotorTrigger.write();
         message.setAndWrite(notificationMessage);
       }
-      catch(ChimeraTK::runtime_error& e) {
+      catch(std::exception& e) {
         // Comes from the state readout. Do nothing here. either it was a single glitch
         // or the readout module will see it as well and start the recovery procedure
       }

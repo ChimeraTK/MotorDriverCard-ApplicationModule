@@ -24,11 +24,12 @@ namespace ChimeraTK::MotorDriver {
 
     // Add our own initialisation handler here so it is called after the init script handler that may or may not have
     // been passed to the StepperMotorModule
-    motorProxyDevice.addInitialisationHandler([this](auto&) {
+    motorProxyDevice.addInitialisationHandler([this](auto& device) {
       try {
         // Poke at the motor. We already know that the underlying transport works when we get called, so this is to do
         // some SPI communication and see if this layer works. If not, hold the init process for a while and then notify
         // the device module that something isn't right. This is mainly to prevent excessive spamming
+        device.open();
         motor->renew();
       }
       catch(ChimeraTK::runtime_error&) {
