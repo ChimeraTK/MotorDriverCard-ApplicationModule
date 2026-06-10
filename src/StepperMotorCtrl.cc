@@ -22,7 +22,8 @@ namespace ChimeraTK::MotorDriver {
     _motor(std::move(motor)) {
     // If motor has HW reference switches,
     // calibration is supported
-    if(_motor->getMotorParameters().motorType == StepperMotorType::LINEAR) {
+    if(_motor->getMotorParameters().motorType == StepperMotorType::LINEAR ||
+        _motor->getMotorParameters().motorType == StepperMotorType::ROTARY) {
       control.calibrationCtrl = CalibrationCommands{&control, ".", "Calibration commands", {"MOTOR"}};
     }
     deviceBecameFunctional =
@@ -216,7 +217,8 @@ namespace ChimeraTK::MotorDriver {
   void ControlInputHandler::prepare() {
     createFunctionMap();
 
-    if(_motor->getMotorParameters().motorType == StepperMotorType::LINEAR) {
+    if(_motor->getMotorParameters().motorType == StepperMotorType::LINEAR ||
+        _motor->getMotorParameters().motorType == StepperMotorType::ROTARY) {
       appendCalibrationToMap();
     }
   }
