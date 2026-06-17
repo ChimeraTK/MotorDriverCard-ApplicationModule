@@ -9,7 +9,7 @@ set(${PROJECT_NAME}_PATCH_VERSION 07)
 include(cmake/set_version_numbers.cmake)
 
 find_package(ChimeraTK-ApplicationCore 01.00 REQUIRED)
-find_package(mtca4u-MotorDriverCard 01.12 REQUIRED)
+find_package(mtca4u-MotorDriverCard 01.16 REQUIRED)
 
 include(cmake/set_default_build_to_release.cmake)
 include(cmake/set_default_flags.cmake)
