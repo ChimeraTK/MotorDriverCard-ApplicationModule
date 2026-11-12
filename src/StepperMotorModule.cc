@@ -3,6 +3,8 @@
 
 #include "StepperMotorModule.h"
 
+#include <ChimeraTK/ApplicationCore/Logger.h>
+
 namespace ChimeraTK::MotorDriver {
 
   StepperMotorModule::StepperMotorModule(ModuleGroup* owner, const std::string& name, const std::string& description,
@@ -29,10 +31,15 @@ namespace ChimeraTK::MotorDriver {
         // Poke at the motor. We already know that the underlying transport works when we get called, so this is to do
         // some SPI communication and see if this layer works. If not, hold the init process for a while and then notify
         // the device module that something isn't right. This is mainly to prevent excessive spamming
+        ChimeraTK::logger(Logger::Severity::info, "StepperMotorModule")
+            << "Initialising motor proxy device for " << motor->toString() << std::endl;
         device.open();
         motor->renew();
       }
-      catch(ChimeraTK::runtime_error&) {
+      catch(ChimeraTK::runtime_error& e) {
+        ChimeraTK::logger(Logger::Severity::error, "StepperMotorModule")
+            << "SPI communication with motor " << motor->toString()
+            << " failed during initialisation, retrying in 5 s: " << e.what() << std::endl;
         boost::this_thread::sleep_for(boost::chrono::seconds(5));
         throw;
       }

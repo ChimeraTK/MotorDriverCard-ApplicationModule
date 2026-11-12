@@ -3,6 +3,7 @@
 #pragma once
 
 #include <ChimeraTK/ApplicationCore/ApplicationCore.h>
+#include <ChimeraTK/ApplicationCore/Logger.h>
 #include <ChimeraTK/MotorDriverCard/StepperMotor.h>
 
 namespace ChimeraTK::MotorDriver {
@@ -11,13 +12,29 @@ namespace ChimeraTK::MotorDriver {
     explicit Motor(StepperMotorParameters parameters) : _parameters(std::move(parameters)) {}
 
     void renew() {
+      logger(Logger::Severity::debug, "Motor") << "Creating new motor object for " << toString() << std::endl;
       // Drop our reference to the StepperMotor. This should free the motor and the factory should give us a new one
       _motor.reset();
-      _motor = StepperMotorFactory::instance().create(_parameters);
+      try {
+        _motor = StepperMotorFactory::instance().create(_parameters);
+      }
+      catch(std::exception& e) {
+        logger(Logger::Severity::error, "Motor")
+            << "Failed to create motor object for " << toString() << ": " << e.what() << std::endl;
+        _open = false;
+        throw;
+      }
       _open = true;
+      logger(Logger::Severity::info, "Motor")
+          << "Motor object for " << toString() << " created, motor is open" << std::endl;
     }
 
     void close() {
+      if(_open) {
+        logger(Logger::Severity::warning, "Motor")
+            << "Closing motor " << toString() << ", all control commands will be rejected until the device recovers"
+            << std::endl;
+      }
       _motor.reset();
       _open = false;
     }

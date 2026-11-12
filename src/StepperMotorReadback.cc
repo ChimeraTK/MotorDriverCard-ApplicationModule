@@ -13,6 +13,8 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ReadbackHandler::prepare() {
+    debug() << "Initialising readback handler for motor " << _motor->toString() << std::endl;
+
     // The module starts with the fake device state in FAIL mode since we
     // did not open the motor yet and know nothing about it
     moduleError.status = StatusOutput::Status::FAULT;
@@ -38,6 +40,8 @@ namespace ChimeraTK::MotorDriver {
     while(true) {
       switch(static_cast<StatusOutput::Status>(moduleError.status)) {
         case StatusOutput::Status::FAULT:
+          info() << "Readback module of motor " << _motor->toString()
+                 << " is in FAULT state, waiting for the device to become functional" << std::endl;
           group.readUntil(deviceBecameFunctional.getId());
 
           tryMotorRenew();
@@ -88,6 +92,8 @@ namespace ChimeraTK::MotorDriver {
     if(_motor && !_motorIsDummy) {
       currentLimit.maxValue = _motor->get()->getSafeCurrentLimit();
       speedLimit.maxValue = _motor->get()->getMaxSpeedCapability();
+      debug() << "Read constant motor parameters of " << _motor->toString() << ": safe current limit "
+              << currentLimit.maxValue << " A, max speed capability " << speedLimit.maxValue << std::endl;
     }
   }
 
@@ -126,6 +132,11 @@ namespace ChimeraTK::MotorDriver {
       currentLimit.userValue = _motor->get()->getUserCurrentLimit(); // Include when this method gets implemented
     }
     speedLimit.userValue = _motor->get()->getUserSpeedLimit();
+
+    trace() << "Read back motor " << _motor->toString() << ": enabled " << status.isEnabled << ", idle "
+            << status.isIdle << ", errorId " << status.errorId << ", calibration mode " << status.calibrationMode
+            << ", position " << position.actualValueInSteps << " steps, target " << position.targetValueInSteps
+            << " steps" << std::endl;
   }
 
   /********************************************************************************************************************/
@@ -179,6 +190,10 @@ namespace ChimeraTK::MotorDriver {
       std::ignore = _motor->get()->getSafeCurrentLimit();
     }
     catch(ChimeraTK::logic_error&) {
+      if(!_motorIsDummy) {
+        info() << "Motor " << _motor->toString() << " is a dummy motor, some readback values will not be available"
+               << std::endl;
+      }
       _motorIsDummy = true;
     }
 
@@ -189,8 +204,12 @@ namespace ChimeraTK::MotorDriver {
 
   void ReadbackHandler::tryMotorRenew() {
     try {
+      info() << "Trying to open motor " << _motor->toString() << std::endl;
       std::ignore = motorIsDummy();
       readConstData();
+      if(moduleError.status != StatusOutput::Status::OK) {
+        info() << "Motor " << _motor->toString() << " recovered, leaving FAULT state" << std::endl;
+      }
       moduleError.status = StatusOutput::Status::OK;
       moduleError.message = "";
       moduleError.setCurrentVersionNumber({});
@@ -198,12 +217,14 @@ namespace ChimeraTK::MotorDriver {
     }
     catch(ChimeraTK::logic_error& e) {
       if(std::string(moduleError.message) != e.what()) {
+        error() << "Could not open motor " << _motor->toString() << ", motor will not move: " << e.what() << std::endl;
         setStatusFromException(e);
       }
       _deviceModule->reportException(e.what());
     }
     catch(ChimeraTK::runtime_error& e) {
       if(std::string(moduleError.message) != e.what()) {
+        error() << "Could not open motor " << _motor->toString() << ", motor will not move: " << e.what() << std::endl;
         setStatusFromException(e);
       }
       _deviceModule->reportException(e.what());
@@ -217,6 +238,7 @@ namespace ChimeraTK::MotorDriver {
 
     // Don't event try reading if there is no motor
     if(!_motor->isOpen()) {
+      trace() << "Skipping readout, motor " << _motor->toString() << " is not open" << std::endl;
       return;
     }
 
@@ -245,6 +267,9 @@ namespace ChimeraTK::MotorDriver {
     }
     catch(ChimeraTK::runtime_error& e) {
       if(_spiErrorCounter > SPI_RETRY_COUNT) {
+        error() << "Lost SPI communication with motor " << _motor->toString() << " after " << (_spiErrorCounter + 1)
+                << " failed attempts, closing motor and entering recovery, motor will not move: " << e.what()
+                << std::endl;
         _motor->close();
         setStatusFromException(e);
         _deviceModule->reportException(e.what());
@@ -254,10 +279,15 @@ namespace ChimeraTK::MotorDriver {
       }
       else {
         _spiErrorCounter++;
+        warning() << "SPI readout of motor " << _motor->toString() << " failed (attempt " << _spiErrorCounter << " of "
+                  << (SPI_RETRY_COUNT + 2) << "), motor is closed if all attempts fail: " << e.what() << std::endl;
       }
     }
     catch(ChimeraTK::logic_error& e) {
       if(_spiErrorCounter > SPI_RETRY_COUNT) {
+        error() << "Motor " << _motor->toString() << " reported an error " << (_spiErrorCounter + 1)
+                << " times in a row, closing motor and entering recovery, motor will not move: " << e.what()
+                << std::endl;
         _motor->close();
         setStatusFromException(e);
         _deviceModule->reportException(e.what());
@@ -267,6 +297,8 @@ namespace ChimeraTK::MotorDriver {
       }
       else {
         _spiErrorCounter++;
+        warning() << "Readout of motor " << _motor->toString() << " failed (attempt " << _spiErrorCounter << " of "
+                  << (SPI_RETRY_COUNT + 2) << "), motor is closed if all attempts fail: " << e.what() << std::endl;
       }
     }
   }
@@ -274,6 +306,8 @@ namespace ChimeraTK::MotorDriver {
   /********************************************************************************************************************/
 
   void ReadbackHandler::setStatusFromException(const std::exception& e) {
+    error() << "Communication with motor " << _motor->toString() << " failed, entering FAULT state: " << e.what()
+            << std::endl;
     moduleError.status = StatusOutput::Status::FAULT;
     moduleError.message = e.what();
     moduleError.setCurrentVersionNumber({});
