@@ -89,7 +89,6 @@ namespace ChimeraTK::MotorDriver {
     ScalarOutput<Boolean> available{this, "isAvailable", "flag", "Flag whether this end switch is available"};
     ScalarOutput<int> positionInSteps{this, "positionInSteps", "steps", "Position of the positive reference switch"};
     ScalarOutput<float> position{this, "position", "", "Position of the positive reference switch"};
-    ScalarOutput<float> tolerance{this, "tolerance", "", "Tolerance of the calibrated positive end switch position."};
     ScalarOutput<int> isActive{this, "isActive", "", "Status of negative end switch"};
   };
 
