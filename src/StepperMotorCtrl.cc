@@ -341,8 +341,6 @@ namespace ChimeraTK::MotorDriver {
   void ControlInputHandler::appendCalibrationToMap() {
     addMapping(
         control.calibrationCtrl.calibrateMotor, ::detail::SKIP_ON_RECOVERY, [this] { return calibrateCallback(); });
-    addMapping(control.calibrationCtrl.determineTolerance, ::detail::SKIP_ON_RECOVERY,
-        [this] { return determineToleranceCallback(); });
   }
 
   /********************************************************************************************************************/
@@ -365,26 +363,5 @@ namespace ChimeraTK::MotorDriver {
     }
 
     return {};
-  }
-
-  /********************************************************************************************************************/
-
-  std::string ControlInputHandler::determineToleranceCallback() {
-    if(!_motor->get()->hasHWReferenceSwitches()) {
-      return "";
-    }
-
-    if(control.calibrationCtrl.determineTolerance) {
-      if(_motor->get()->isSystemIdle()) {
-        auto code = _motor->get()->determineTolerance();
-        if(code != ExitStatus::SUCCESS) {
-          return "Could not determine endswitch tolerance: " + ChimeraTK::MotorDriver::toString(code);
-        }
-      }
-      else {
-        return "WARNING: Called determineTolerance while motor is not in IDLE state.";
-      }
-    }
-    return "";
   }
 } // namespace ChimeraTK::MotorDriver

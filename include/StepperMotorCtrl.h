@@ -20,8 +20,6 @@ namespace ChimeraTK::MotorDriver {
     using VariableGroup::VariableGroup;
 
     ScalarPushInput<int32_t> calibrateMotor{this, "calibrate", "", "Calibrates the motor"};
-    ScalarPushInput<int32_t> determineTolerance{
-        this, "determineTolerance", "", "Determines tolerance of the end switch positions"};
   };
 
   /********************************************************************************************************************/
@@ -165,7 +163,6 @@ namespace ChimeraTK::MotorDriver {
 
     // Callbacks for the LinearStepperMotor
     std::string calibrateCallback();
-    std::string determineToleranceCallback();
 
     // ReadAnyGroup _inputGroup{};
     std::shared_ptr<Motor> _motor;

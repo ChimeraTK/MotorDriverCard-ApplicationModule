@@ -143,9 +143,6 @@ namespace ChimeraTK::MotorDriver {
       negativeEndSwitch.positionInSteps = _motor->get()->getNegativeEndReferenceInSteps();
       positiveEndSwitch.position = _motor->get()->recalculateStepsInUnits(positiveEndSwitch.positionInSteps);
       negativeEndSwitch.position = _motor->get()->recalculateStepsInUnits(negativeEndSwitch.positionInSteps);
-
-      positiveEndSwitch.tolerance = _motor->get()->getTolerancePositiveEndSwitch();
-      negativeEndSwitch.tolerance = _motor->get()->getToleranceNegativeEndSwitch();
     }
     else {
       positiveEndSwitch.available = false;
@@ -161,11 +158,6 @@ namespace ChimeraTK::MotorDriver {
 
       positiveEndSwitch.position.setDataValidity(DataValidity::faulty);
       negativeEndSwitch.position.setDataValidity(DataValidity::faulty);
-
-      positiveEndSwitch.tolerance = 0.F;
-      negativeEndSwitch.tolerance = 0.F;
-      positiveEndSwitch.tolerance.setDataValidity(DataValidity::faulty);
-      negativeEndSwitch.tolerance.setDataValidity(DataValidity::faulty);
     }
   }
 
